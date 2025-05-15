@@ -85,6 +85,7 @@
        <el-table-column type="selection" width="55" align="center" />
 <!--       <el-table-column label="模板编号" prop="id" width="80" />-->
        <el-table-column label="大类编号" prop="id"  width="120"/>
+       <el-table-column label="大类类型" prop="typeName"  width="120"/>
        <el-table-column label="大类名称" prop="name"  width="120" />
 <!--       <el-table-column label="视频链接" prop="videoUrl" :show-overflow-tooltip="true" width="200" />
        <el-table-column label="音频链接" prop="audioUrl" :show-overflow-tooltip="true" width="200" />
@@ -139,6 +140,22 @@
             <el-form-item label="大类名称" prop="name"> <!-- 此处的name负责校验提示-->
                <el-input v-model="form.name" placeholder="请输入大类名称" />
             </el-form-item>
+           <el-form-item label="大类类型" prop="type">
+             <el-select
+                 v-model="form.type"
+                 filterable
+                 clearable
+                 placeholder="请选择大类类型"
+                 :loading="loading"
+             >
+               <el-option
+                   v-for="item in categoryOptions"
+                   :key="item.id"
+                   :label="item.name"
+                   :value="item.id"
+               />
+             </el-select>
+           </el-form-item>
 <!--            <el-form-item prop="roleKey">
                <template #label>
                   <span>
@@ -243,6 +260,54 @@ const router = useRouter();
 const { proxy } = getCurrentInstance();
 const { sys_normal_disable } = proxy.useDict("sys_normal_disable");
 
+import { ref, reactive, onMounted } from 'vue'
+import { getCategoryTypeList } from '@/api/system/category' // 假设这是你的API接口
+
+// 下拉选项数据
+const categoryOptions = ref([])
+
+// 生命周期：组件挂载时加载数据
+onMounted(async () => {
+  await loadCategoryType()
+})
+
+// 加载分类数据方法
+const loadCategoryType = async () => {
+  try {
+    loading.value = true
+    const res = await getCategoryTypeList() // 调用后端接口
+    categoryOptions.value = res.data.map(item => ({
+      id: item.typeId,
+      name: item.typeName // 根据实际接口字段调整
+    }))
+  } catch (error) {
+    console.error('加载分类数据失败:', error)
+    ElMessage.error('分类数据加载失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 如果是编辑页面，需要处理初始值
+// 假设从父组件接收编辑数据（示例）
+const props = defineProps({
+  initialData: {
+    type: Object,
+    default: () => ({})
+  }
+})
+
+// 监听初始数据变化
+/*watch(() => props.initialData, (newVal) => {
+  console.log("newVal"+newVal.id);
+  if (newVal.categoryId) {
+    // 确保选项加载完成后再设置值
+    nextTick(() => {
+      form.categoryId = newVal.categoryId
+    })
+  }
+}, { immediate: true })*/
+
 const roleList = ref([]);
 const open = ref(false);
 const loading = ref(true);
@@ -281,7 +346,8 @@ const data = reactive({
     /*status: undefined*/
   },
   rules: {
-    name: [{ required: true, message: "大类名称不能为空", trigger: "blur" }]
+    name: [{ required: true, message: "大类名称不能为空", trigger: "blur" }],
+    type: [{required:true, message: "大类类型不能为空", trigger: "blur"}]
   },
 });
 

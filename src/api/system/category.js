@@ -1,5 +1,12 @@
 import request from '@/utils/request'
 
+export function getCategoryTypeList(){
+  return request({
+    url:'/categoryType/list',
+    method: 'get',
+  })
+}
+
 // 查询角色列表
 export function listRole(query) {
   return request({

@@ -10,6 +10,24 @@ export function listRole(query) {
   })
 }
 
+// 查询模板大类列表
+export function getCategoryList() {
+  return request({
+    url: '/category/listMap',
+    method: 'get',
+    params: ''
+  })
+}
+
+// 查询模板大类列表
+export function getCategoryListByTypeId(typeId) {
+  return request({
+    url: '/category/listMap/'+typeId,
+    method: 'get',
+    params: ''
+  })
+}
+
 // 查询角色详细
 export function getRole(roleId) {
   return request({
@@ -117,4 +135,14 @@ export function deptTreeSelect(roleId) {
     url: '/system/role/deptTree/' + roleId,
     method: 'get'
   })
+}
+
+export function clearFileList(){
+  this.fileList = [];
+}
+
+export function handleRemove(file, fileList) {
+  // 当文件被移除时，更新fileList，这里可以不手动操作，因为Element UI会自动更新
+  // 但如果你想手动控制，可以再次调用 clearFileList()
+  this.clearFileList();
 }

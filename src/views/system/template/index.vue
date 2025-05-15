@@ -86,7 +86,8 @@
        <el-table-column type="selection" width="55" align="center" />
        <el-table-column label="编号" prop="id" width="60" />
        <el-table-column label="所属大类" prop="categoryName"  width="90"/>
-       <el-table-column label="模板名" prop="name"  width="90" />
+       <el-table-column label="大类类型" prop="typeName" width="90"/>
+       <el-table-column label="模板名" prop="name"  width="180" />
        <el-table-column label="视频链接" prop="videoUrl" :show-overflow-tooltip="true" width="240" />
        <el-table-column label="音频链接" prop="audioUrl" :show-overflow-tooltip="true" width="240"/>
 <!--       <el-table-column label="音频作者" prop="audioAuthor" width="80" />-->
@@ -137,8 +138,41 @@
       <!-- 添加或修改角色配置对话框 -->
       <el-dialog :title="title" v-model="open" width="500px" append-to-body>
          <el-form ref="roleRef" :model="form" :rules="rules" label-width="100px">
-           <el-form-item label="所属大类" prop="categoryId" ><!-- 此处的prop属性和提示有关-->
+<!--           <el-form-item label="所属大类" prop="categoryId" >&lt;!&ndash; 此处的prop属性和提示有关&ndash;&gt;
              <el-input v-model="form.categoryId" placeholder="请输入所属大类Id" />
+           </el-form-item>-->
+           <el-form-item label="大类类型" prop="type">
+             <el-select
+                 v-model="form.type"
+                 @change="handleTypeChange"
+                 filterable
+                 clearable
+                 placeholder="请选择大类类型"
+                 :loading="loading"
+             >
+               <el-option
+                   v-for="item in categoryTypeOptions"
+                   :key="item.id"
+                   :label="item.name"
+                   :value="item.id"
+               />
+             </el-select>
+           </el-form-item>
+           <el-form-item label="所属大类名" prop="categoryId">
+             <el-select
+                 v-model="form.categoryId"
+                 filterable
+                 clearable
+                 placeholder="请选择所属大类"
+                 :loading="loading"
+             >
+             <el-option
+                 v-for="item in categoryOptions"
+                 :key="item.id"
+                 :label="item.name"
+                 :value="item.id"
+             />
+             </el-select>
            </el-form-item>
             <el-form-item label="模板名称" prop="name"><!-- 此处的prop属性和提示有关-->
                <el-input v-model="form.name" placeholder="请输入模板名称" />
@@ -146,35 +180,14 @@
             <el-form-item label="模板顺序" prop="officialWeight">
                <el-input-number v-model="form.officialWeight" controls-position="right" :min="0" />
             </el-form-item>
-           <!-- 新增文件上传表单项 -->
-<!--           <el-form-item label="文件上传" prop="fileList">
-             <el-upload
-                 v-model:file-list="form.fileList"
-                 class="upload-demo"
-                 action="/api/upload"
-             :on-success="handleSuccess"
-             :before-upload="beforeUpload"
-             :limit="3"
-             :on-exceed="handleExceed"
-             :accept="'.png,.jpg'"
-             >
-             <el-button type="primary">点击上传</el-button>
-             <template #tip>
-               <div class="el-upload__tip">
-                 支持扩展名：.pdf/.doc/.docx，单个文件不超过10MB
-               </div>
-             </template>
-             </el-upload>
-           </el-form-item>-->
-
            <!-- 动作文件 -->
            <el-form-item label="动作文件" prop="actionUrl">
              <el-upload
+                 v-model:file-list="form.actionFiles"
                  action="/dev-api/template/upload"
                  :on-success="(res) => handleSuccess(res, 'actionUrl')"
-                 :before-upload="(file) => beforeUpload(file, ['png', 'jpg'], 50)"
-                 :accept="'.png,.jpg,.csv'"
-             >
+                 :before-upload="(file) => beforeUpload(file, ['png', 'jpg','csv'], 50)"
+                 :accept="'.png,.jpg,.csv'">
                <el-button type="primary">点击上传</el-button>
                <div class="el-upload__tip">支持.png,.jpg,.csv格式，不超过50MB</div>
 <!--               <div v-if="form.actionUrl" class="upload-success">
@@ -183,64 +196,52 @@
              </el-upload>
            </el-form-item>
 
-           <!-- 视频文件 -->
+           <!-- 视频文件文件 -->
            <el-form-item label="视频文件" prop="videoUrl">
              <el-upload
+                 v-model:file-list="form.videoFiles"
                  action="/dev-api/template/upload"
                  :on-success="(res) => handleSuccess(res, 'videoUrl')"
                  :before-upload="(file) => beforeUpload(file, ['mp4', 'mov'], 500)"
-                 :accept="'.mp4,.mov'"
-             >
+                 :accept="'.mp4,.mov'">
                <el-button type="primary">点击上传</el-button>
                <div class="el-upload__tip">支持.mp4/.mov格式，不超过500MB</div>
-<!--               <div v-if="form.videoUrl" class="upload-success">
-                 已上传：{{ form.videoUrl }}
-               </div>-->
              </el-upload>
            </el-form-item>
-           <!-- 视频文件 -->
+           <!-- 音频文件 -->
            <el-form-item label="音频文件" prop="audioUrl">
              <el-upload
+                 v-model:file-list="form.audioFiles"
                  action="/dev-api/template/upload"
                  :on-success="(res) => handleSuccess(res, 'audioUrl')"
                  :before-upload="(file) => beforeUpload(file, ['mp3'], 500)"
-                 :accept="'.mp3'"
-             >
+                 :accept="'.mp3'">
                <el-button type="primary">点击上传</el-button>
                <div class="el-upload__tip">支持.mp3</div>
-               <!--               <div v-if="form.videoUrl" class="upload-success">
-                                已上传：{{ form.videoUrl }}
-                              </div>-->
              </el-upload>
            </el-form-item>
-           <!-- 视频文件 -->
+           <!-- 封面图片 -->
            <el-form-item label="封面图片" prop="coverUrl">
              <el-upload
+                 v-model:file-list="form.coverUrlFiles"
                  action="/dev-api/template/upload"
                  :on-success="(res) => handleSuccess(res, 'coverUrl')"
                  :before-upload="(file) => beforeUpload(file, ['png', 'jpg'], 500)"
-                 :accept="'.jpg,.png'"
-             >
+                 :accept="'.jpg,.png'">
                <el-button type="primary">点击上传</el-button>
                <div class="el-upload__tip">支持.jpg/.jpg</div>
-               <!--               <div v-if="form.videoUrl" class="upload-success">
-                                已上传：{{ form.videoUrl }}
-                              </div>-->
              </el-upload>
            </el-form-item>
-           <!-- 视频文件 -->
+           <!-- 封面对应的内容 -->
            <el-form-item label="封面内容" prop="coverContentUrl">
              <el-upload
+                 v-model:file-list="form.coverContentFiles"
                  action="/dev-api/template/upload"
                  :on-success="(res) => handleSuccess(res, 'coverContentUrl')"
                  :before-upload="(file) => beforeUpload(file, ['mp4', 'mov'], 500)"
-                 :accept="'.mp4,.mov'"
-             >
+                 :accept="'.mp4,.mov'">
                <el-button type="primary">点击上传</el-button>
                <div class="el-upload__tip">支持.mp4/.mov格式，不超过500MB</div>
-               <!--               <div v-if="form.videoUrl" class="upload-success">
-                                已上传：{{ form.videoUrl }}
-                              </div>-->
              </el-upload>
            </el-form-item>
 <!--            <el-form-item label="状态">
@@ -311,8 +312,111 @@
 </template>
 
 <script setup name="Role">
-import { addRole, changeRoleStatus, dataScope, delRole, getRole, listRole, updateRole, deptTreeSelect } from "@/api/system/template";
+import {
+  addRole,
+  changeRoleStatus,
+  dataScope,
+  delRole,
+  getRole,
+  listRole,
+  updateRole,
+  deptTreeSelect,
+  getCategoryListByTypeId
+} from "@/api/system/template";
 import { roleMenuTreeselect, treeselect as menuTreeselect } from "@/api/system/menu";
+import { ref, reactive, onMounted } from 'vue'
+import { getCategoryList } from '@/api/system/template'
+import { getCategoryTypeList } from '@/api/system/category'
+
+// 下拉选项数据
+const categoryOptions = ref([])
+
+// 生命周期：组件挂载时加载数据
+onMounted(async () => {
+  await loadCategoryType()
+})
+
+// 当一级选择变化时
+const handleTypeChange = async (typeId) => {
+  console.log("why")
+  // 1. 立即清空二级分类的值和选项
+  form.value.categoryId = null;     // 清空选中值
+    // 清空旧选项（注意使用.value）
+  if (!typeId) {
+    return
+  }
+  try {
+    const res = await getCategoryListByTypeId(typeId) // 根据大类类型Id获取其下大类
+    categoryOptions.value = res.data.map(item => ({
+      id: item.id,
+      name: item.name // 根据实际接口字段调整
+    }))
+  } finally {
+    // 出错时也保持清空
+  }
+}
+
+// 下拉选项数据
+const categoryTypeOptions = ref([])
+
+// 生命周期：组件挂载时加载数据
+onMounted(async () => {
+  await loadCategoryType()
+})
+
+// 加载大类类型数据方法
+const loadCategoryType = async () => {
+  try {
+    loading.value = true
+    const res = await getCategoryTypeList() // 调用后端接口
+    categoryTypeOptions.value = res.data.map(item => ({
+      id: item.typeId,
+      name: item.typeName // 根据实际接口字段调整
+    }))
+  } catch (error) {
+    console.error('加载分类数据失败:', error)
+    ElMessage.error('分类数据加载失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 加载大类名数据方法
+const loadCategories = async () => {
+  try {
+    loading.value = true
+    const res = await getCategoryList() // 调用后端接口
+    categoryOptions.value = res.data.map(item => ({
+      id: item.id,
+      name: item.name // 根据实际接口字段调整
+    }))
+  } catch (error) {
+    console.error('加载分类数据失败:', error)
+    ElMessage.error('分类数据加载失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 如果是编辑页面，需要处理初始值
+// 假设从父组件接收编辑数据（示例）
+const props = defineProps({
+  initialData: {
+    type: Object,
+    default: () => ({})
+  }
+})
+
+// 监听初始数据变化
+/*watch(() => props.initialData, (newVal) => {
+  console.log("newVal"+newVal.id);
+  if (newVal.categoryId) {
+    // 确保选项加载完成后再设置值
+    nextTick(() => {
+      form.categoryId = newVal.categoryId
+    })
+  }
+}, { immediate: true })*/
 
 const router = useRouter();
 const { proxy } = getCurrentInstance();
@@ -352,13 +456,16 @@ const data = reactive({
   queryParams: {
     pageNum: 1,
     pageSize: 10,
+    type:null,
+    categoryId:null,
     categoryName: undefined,
     templateName: undefined,
     status: undefined
   },
   rules: {
     name: [{ required: true, message: "模板名称不能为空", trigger: "blur" }],
-    categoryId: [{ required: true, message: "大类Id不能为空", trigger: "blur" }],
+    type: [{ required: true, message: "请选择大类类型", trigger: "blur" }],
+    categoryId: [{ required: true, message: "请选择所属大类", trigger: "blur" }],
     officialWeight: [{ required: true, message: "模板顺序不能为空", trigger: "blur" }]
   },
 });
@@ -401,9 +508,9 @@ function handleDelete(row) {
 
 // 统一上传成功处理
 function handleSuccess(res, field) {
-  console.log(res);
   if (res.code === 200) {
     this.form[field] = res.msg
+    /*console.log("this.message:"+this.form["fileList"]);*/
     //this.$message.success(`${field}上传成功`)
   }
 }
@@ -431,6 +538,12 @@ function handleExport() {
     ...queryParams.value,
   }, `role_${new Date().getTime()}.xlsx`);
 }
+
+/*function handleRemove(file, fileList) {
+  // 当文件被移除时，更新fileList，这里可以不手动操作，因为Element UI会自动更新
+  // 但如果你想手动控制，可以再次调用 clearFileList()
+  this.clearFileList();
+}*/
 
 /** 多选框选中数据 */
 function handleSelectionChange(selection) {
@@ -503,6 +616,11 @@ function reset() {
     officialWeight: 0,
     actionUrl:undefined,
     status: "0",
+    actionFiles:[],
+    videoFiles:[],
+    audioFiles:[],
+    coverUrlFiles:[],
+    coverContentFiles:[],
     menuIds: [],
     deptIds: [],
     menuCheckStrictly: true,
@@ -512,11 +630,11 @@ function reset() {
   proxy.resetForm("roleRef");
 }
 
-/** 添加角色 */
+/** 添加模板 */
 function handleAdd() {
   reset();
   open.value = true;
-  title.value = "添加角色";
+  title.value = "添加模板";
 }
 
 /** 修改角色 */
