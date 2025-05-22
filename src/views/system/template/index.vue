@@ -84,16 +84,17 @@
       <!-- 表格数据 -->
      <el-table v-loading="loading" :data="roleList" @selection-change="handleSelectionChange">
        <el-table-column type="selection" width="55" align="center" />
-       <el-table-column label="编号" prop="id" width="60" />
-       <el-table-column label="所属大类" prop="categoryName"  width="90"/>
-       <el-table-column label="大类类型" prop="typeName" width="90"/>
-       <el-table-column label="模板名" prop="name"  width="180" />
-       <el-table-column label="视频链接" prop="videoUrl" :show-overflow-tooltip="true" width="240" />
-       <el-table-column label="音频链接" prop="audioUrl" :show-overflow-tooltip="true" width="240"/>
+       <el-table-column label="编号" align="center" prop="id" width="60" />
+       <el-table-column label="所属大类" align="center" prop="categoryName"  width="90"/>
+       <el-table-column label="大类类型" align="center" prop="typeName" width="90"/>
+       <el-table-column label="模板名" align="center" prop="name"  width="180" />
+       <el-table-column label="作者" align="center" prop="author"  width="120" />
+       <el-table-column label="视频链接" align="center" prop="videoUrl" :show-overflow-tooltip="true" width="240" />
+       <el-table-column label="音频链接" align="center" prop="audioUrl" :show-overflow-tooltip="true" width="240"/>
 <!--       <el-table-column label="音频作者" prop="audioAuthor" width="80" />-->
-       <el-table-column label="动作链接" prop="actionUrl" :show-overflow-tooltip="true" width="240" />
-       <el-table-column label="封面" prop="coverUrl" :show-overflow-tooltip="true" width="240" />
-       <el-table-column label="封面内容" prop="coverContentUrl" :show-overflow-tooltip="true" width="240" />
+       <el-table-column label="动作链接" align="center" prop="actionUrl" :show-overflow-tooltip="true" width="240" />
+       <el-table-column label="封面" align="center" prop="coverUrl" :show-overflow-tooltip="true" width="240" />
+       <el-table-column label="封面内容" align="center" prop="coverContentUrl" :show-overflow-tooltip="true" width="240" />
 <!--       <el-table-column label="状态" align="center" width="100">
          <template #default="scope">
            <el-switch
@@ -177,6 +178,9 @@
             <el-form-item label="模板名称" prop="name"><!-- 此处的prop属性和提示有关-->
                <el-input v-model="form.name" placeholder="请输入模板名称" />
             </el-form-item>
+           <el-form-item label="模板作者" prop="author">
+             <el-input v-model="form.author" placeholder="请输入作者名" />
+           </el-form-item>
             <el-form-item label="模板顺序" prop="officialWeight">
                <el-input-number v-model="form.officialWeight" controls-position="right" :min="0" />
             </el-form-item>
@@ -637,13 +641,12 @@ function handleAdd() {
   title.value = "添加模板";
 }
 
-/** 修改角色 */
+/** 修改模板 */
 function handleUpdate(row) {
   reset();
   const id = row.id || ids.value;
   getRole(id).then(response => {
     form.value = response.data;
-    form.value.roleSort = Number(form.value.roleSort);
     open.value = true;
     nextTick(() => {
       roleMenu.then((res) => {
