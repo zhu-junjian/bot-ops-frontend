@@ -4,7 +4,7 @@ import request from '@/utils/request'
 export function listRole(query) {
   return request({
     //url: '/system/role/list',
-    url: '/post/list',
+    url: '/handMsgStore/list',
     method: 'get',
     params: query
   })
@@ -72,16 +72,15 @@ export function getCategoryListByTypeId(typeId) {
 // 查询角色详细
 export function getRole(roleId) {
   return request({
-    url: '/post/' + roleId,
+    url: '/handMsgStore/' + roleId,
     method: 'get'
   })
 }
 
 // 新增角色
 export function addRole(data) {
-  console.log("111");
   return request({
-    url: '/post',
+    url: '/handMsgStore',
     method: 'post',
     data: data
   })
@@ -90,7 +89,7 @@ export function addRole(data) {
 // 新增角色
 export function addPost(data) {
   return request({
-    url: '/post',
+    url: '/handMsgStore',
     method: 'post',
     data: data
   })
@@ -99,7 +98,7 @@ export function addPost(data) {
 // 修改角色
 export function updateRole(data) {
   return request({
-    url: '/post',
+    url: '/handMsgStore',
     method: 'put',
     data: data
   })
@@ -128,13 +127,13 @@ export function changeRoleStatus(roleId, status) {
 }
 
 // 内容精选
-export function changeFeaturedStatus(id, isFeatured) {
+export function changeFeaturedStatus(id, status) {
   const data = {
     id,
-    isFeatured
+    status
   }
   return request({
-    url: '/post/isFeatured',
+    url: '/handMsgStore/changeStatus',
     method: 'put',
     data: data
   })
@@ -143,7 +142,7 @@ export function changeFeaturedStatus(id, isFeatured) {
 // 删除角色
 export function delRole(id) {
   return request({
-    url: '/post/' + id,
+    url: '/handMsgStore/' + id,
     method: 'delete'
   })
 }

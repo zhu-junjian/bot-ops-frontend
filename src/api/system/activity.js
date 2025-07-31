@@ -1,10 +1,13 @@
 import request from '@/utils/request'
 
-// 查询角色列表
-export function listRole(query) {
+/**
+ * 活动列表查询
+ * @param query
+ * @returns {*}
+ */
+export function listActivity(query) {
   return request({
-    //url: '/system/role/list',
-    url: '/post/list',
+    url: '/activity/list',
     method: 'get',
     params: query
   })
@@ -40,26 +43,6 @@ export function getTopicList() {
   })
 }
 
-export function getUserList(){
-  return request({
-    url: '/corm/user/listMap',
-    method: 'get',
-    params: ''
-  })
-}
-
-/**
- * 查询后端可选活动列表
- * @returns {*}
- */
-export function getActivityList() {
-  return request({
-    url: '/activity/listMap',
-    method: 'get',
-    params: ''
-  })
-}
-
 // 查询模板大类列表
 export function getCategoryListByTypeId(typeId) {
   return request({
@@ -70,16 +53,15 @@ export function getCategoryListByTypeId(typeId) {
 }
 
 // 查询角色详细
-export function getRole(roleId) {
+export function getActivity(roleId) {
   return request({
-    url: '/post/' + roleId,
+    url: '/activity/' + roleId,
     method: 'get'
   })
 }
 
 // 新增角色
 export function addRole(data) {
-  console.log("111");
   return request({
     url: '/post',
     method: 'post',
@@ -87,19 +69,23 @@ export function addRole(data) {
   })
 }
 
-// 新增角色
-export function addPost(data) {
+/**
+ * 新增 活动
+ * @param data
+ * @returns {*}
+ */
+export function addActivity(data) {
   return request({
-    url: '/post',
+    url: '/activity',
     method: 'post',
     data: data
   })
 }
 
 // 修改角色
-export function updateRole(data) {
+export function updateActivity(data) {
   return request({
-    url: '/post',
+    url: '/activity',
     method: 'put',
     data: data
   })
@@ -143,7 +129,7 @@ export function changeFeaturedStatus(id, isFeatured) {
 // 删除角色
 export function delRole(id) {
   return request({
-    url: '/post/' + id,
+    url: '/activity/' + id,
     method: 'delete'
   })
 }

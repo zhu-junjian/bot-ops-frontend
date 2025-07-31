@@ -1,40 +1,15 @@
 <template>
    <div class="app-container">
       <el-form :model="queryParams" ref="queryRef" v-show="showSearch" :inline="true" label-width="68px">
-         <el-form-item label="大类名称" prop="name">
+         <el-form-item label="话题名称" prop="name">
             <el-input
                v-model="queryParams.name"
-               placeholder="请输大类名称"
+               placeholder="请输入话题名称"
                clearable
                style="width: 240px"
                @keyup.enter="handleQuery"
             />
          </el-form-item>
-<!--        <el-form-item label="是否精选" prop="isFeatured">
-          <el-select
-              v-model="queryParams.isFeatured"
-              placeholder="精选状态"
-              clearable
-              style="width: 240px"
-          >
-            <el-option
-                v-for="dict in sys_post_featured"
-                :key="dict.value"
-                :label="dict.label"
-                :value="dict.value"
-            />
-          </el-select>
-        </el-form-item>-->
-
-<!--        <el-form-item label="是否精选" prop="isFeatured">
-          <el-input
-              v-model="queryParams.isFeatured"
-              placeholder=""
-              clearable
-              style="width: 240px"
-              @keyup.enter="handleQuery"
-          />
-        </el-form-item>-->
 <!--         <el-form-item label="状态" prop="status">
             <el-select
                v-model="queryParams.status"
@@ -101,8 +76,7 @@
      <el-table v-loading="loading" :data="roleList" @selection-change="handleSelectionChange">
        <el-table-column type="selection" width="55" align="center" />
        <el-table-column label="编号" align="center" prop="id" width="60" />
-       <el-table-column label="名称" align="center" prop="name"  width="240"/>
-       <el-table-column label="排序" align="center" prop="officialWeight"  width="120" />
+       <el-table-column label="话题名称" align="center" prop="name" :show-overflow-tooltip="true" width="240" />
        <el-table-column label="启用" align="center" width="100" prop="status">
          <template #default="scope">
            <el-switch
@@ -113,14 +87,29 @@
            ></el-switch>
          </template>
        </el-table-column>
+<!--       <el-table-column label="状态" align="center" width="100">
+         <template #default="scope">
+           <el-switch
+               v-model="scope.row.status"
+               active-value="0"
+               inactive-value="1"
+               @change="handleStatusChange(scope.row)"
+           ></el-switch>
+         </template>
+       </el-table-column>-->
+       <el-table-column label="创建时间" align="center" prop="createTime"  >
+         <template #default="scope">
+           <span>{{ parseTime(scope.row.createTime) }}</span>
+         </template>
+       </el-table-column>
        <el-table-column label="操作" align="center" class-name="small-padding fixed-width" >
          <template #default="scope">
-<!--           <el-tooltip content="修改" placement="top" v-if="scope.row.roleId !== 1">
+           <el-tooltip content="修改" placement="top" v-if="scope.row.roleId !== 1">
              <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" ></el-button>
-           </el-tooltip>-->
-<!--           <el-tooltip content="删除" placement="top" v-if="scope.row.roleId !== 1">
+           </el-tooltip>
+           <el-tooltip content="删除" placement="top" v-if="scope.row.roleId !== 1">
              <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)"></el-button>
-           </el-tooltip>-->
+           </el-tooltip>
 <!--           <el-tooltip content="数据权限" placement="top" v-if="scope.row.roleId !== 1">
              <el-button link type="primary" icon="CircleCheck" @click="handleDataScope(scope.row)" v-hasPermi="['system:role:edit']"></el-button>
            </el-tooltip>
@@ -142,12 +131,24 @@
       <!-- 添加或修改角色配置对话框 -->
       <el-dialog :title="title" v-model="open" width="500px" append-to-body>
          <el-form ref="roleRef" :model="form" :rules="rules" label-width="100px">
-           <el-form-item label="名称" prop="name">
-             <el-input v-model="form.name" placeholder="请输入名称" />
-           </el-form-item>
-           <el-form-item label="官方排序" prop="officialWeight">
-              <el-input-number v-model="form.officialWeight" controls-position="right" :min="0" />
-           </el-form-item>
+<!--           <el-form-item label="所属大类" prop="categoryId" >&lt;!&ndash; 此处的prop属性和提示有关&ndash;&gt;
+             <el-input v-model="form.categoryId" placeholder="请输入所属大类Id" />
+           </el-form-item>-->
+            <el-form-item label="话题名称" prop="name"><!-- 此处的prop属性和提示有关-->
+               <el-input v-model="form.name" placeholder="请输入话题名称" />
+            </el-form-item>
+<!--            <el-form-item label="状态">
+               <el-radio-group v-model="form.status">
+                  <el-radio
+                     v-for="dict in sys_normal_disable"
+                     :key="dict.value"
+                     :value="dict.value"
+                  >{{ dict.label }}</el-radio>
+               </el-radio-group>
+            </el-form-item>
+            <el-form-item label="备注">
+               <el-input v-model="form.remark" type="textarea" placeholder="请输入内容"></el-input>
+            </el-form-item>-->
          </el-form>
          <template #footer>
             <div class="dialog-footer">
@@ -209,17 +210,16 @@ import {
   changeRoleStatus,
   dataScope,
   delRole,
-  addPost,
   getRole,
   listRole,
   updateRole,
-  deptTreeSelect, changeFeaturedStatus,
-  //getCategoryListByTypeId
-} from "@/api/system/flCategory";
+  deptTreeSelect,
+  getCategoryListByTypeId
+} from "@/api/system/topic";
 import { roleMenuTreeselect, treeselect as menuTreeselect } from "@/api/system/menu";
 import { ref, reactive, onMounted } from 'vue'
-//import { getCategoryList } from '@/api/system/template'
-//import { getCategoryTypeList } from '@/api/system/category'
+import { getCategoryList } from '@/api/system/template'
+import { getCategoryTypeList } from '@/api/system/category'
 
 // 下拉选项数据
 const categoryOptions = ref([])
@@ -313,7 +313,7 @@ const props = defineProps({
 
 const router = useRouter();
 const { proxy } = getCurrentInstance();
-const { sys_post_featured } = proxy.useDict("sys_post_featured");
+const { sys_normal_disable } = proxy.useDict("sys_normal_disable");
 
 const roleList = ref([]);
 const open = ref(false);
@@ -356,7 +356,7 @@ const data = reactive({
     status: undefined
   },
   rules: {
-    name: [{ required: true, message: "名称不能为空", trigger: "blur" }],
+    name: [{ required: true, message: "模板名称不能为空", trigger: "blur" }],
     type: [{ required: true, message: "请选择大类类型", trigger: "blur" }],
     categoryId: [{ required: true, message: "请选择所属大类", trigger: "blur" }],
     officialWeight: [{ required: true, message: "模板顺序不能为空", trigger: "blur" }]
@@ -445,15 +445,15 @@ function handleSelectionChange(selection) {
   multiple.value = !selection.length;
 }
 
-/** status状态修改 */
+/** 角色状态修改 */
 function handleStatusChange(row) {
-  let text = row.status === 1 ? "禁用" : "启用";
-  proxy.$modal.confirm('确认要"' + text + '""' + row.name + '"大类吗?').then(function () {
-    return changeFeaturedStatus(row.id, row.status);
+  let text = row.status === "0" ? "启用" : "停用";
+  proxy.$modal.confirm('确认要"' + text + '""' + row.roleName + '"角色吗?').then(function () {
+    return changeRoleStatus(row.roleId, row.status);
   }).then(() => {
     proxy.$modal.msgSuccess(text + "成功");
   }).catch(function () {
-    row.status = row.status === 1 ? 0 : 1;
+    row.status = row.status === "0" ? "1" : "0";
   });
 }
 
@@ -527,7 +527,7 @@ function reset() {
 function handleAdd() {
   reset();
   open.value = true;
-  title.value = "发布内容";
+  title.value = "添加模板";
 }
 
 /** 修改模板 */
@@ -621,7 +621,7 @@ function submitForm() {
           getList();
         });
       } else {
-        addPost(form.value).then(response => {
+        addRole(form.value).then(response => {
           proxy.$modal.msgSuccess("新增成功");
           open.value = false;
           getList();

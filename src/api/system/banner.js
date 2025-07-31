@@ -1,10 +1,9 @@
 import request from '@/utils/request'
 
 // 查询角色列表
-export function listRole(query) {
+export function listBanner(query) {
   return request({
-    //url: '/system/role/list',
-    url: '/post/list',
+    url: '/banner/list',
     method: 'get',
     params: query
   })
@@ -72,7 +71,7 @@ export function getCategoryListByTypeId(typeId) {
 // 查询角色详细
 export function getRole(roleId) {
   return request({
-    url: '/post/' + roleId,
+    url: '/banner/' + roleId,
     method: 'get'
   })
 }
@@ -90,7 +89,7 @@ export function addRole(data) {
 // 新增角色
 export function addPost(data) {
   return request({
-    url: '/post',
+    url: '/banner',
     method: 'post',
     data: data
   })
@@ -99,7 +98,7 @@ export function addPost(data) {
 // 修改角色
 export function updateRole(data) {
   return request({
-    url: '/post',
+    url: '/banner',
     method: 'put',
     data: data
   })
@@ -143,7 +142,7 @@ export function changeFeaturedStatus(id, isFeatured) {
 // 删除角色
 export function delRole(id) {
   return request({
-    url: '/post/' + id,
+    url: '/banner/' + id,
     method: 'delete'
   })
 }
