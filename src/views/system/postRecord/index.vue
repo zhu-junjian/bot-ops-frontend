@@ -264,6 +264,16 @@
             <el-form-item label="官方排序" prop="officialWeight">
                <el-input-number v-model="form.officialWeight" controls-position="right" :min="0" />
             </el-form-item>
+<!--           <el-form-item label="是否精选" prop="isFeatured">
+             <template #default="scope">
+               <el-switch
+                   v-model="scope.row.isFeatured"
+                   :active-value="1"
+                   :inactive-value="0"
+                   @change="handleStatusChange(scope.row)"
+               ></el-switch>
+             </template>
+           </el-form-item>-->
            <!-- 动作文件 -->
            <el-form-item label="动作文件" prop="actionUrl">
              <!-- 文件链接 -->
@@ -301,10 +311,10 @@
                  v-model:file-list="form.videoFiles"
                  action="/dev-api/template/upload"
                  :on-success="(res) => handleSuccess(res, 'imageUrl')"
-                 :before-upload="(file) => beforeUpload(file, ['png', 'jpg','jpeg','mp4', 'mov'], 500)"
-                 :accept="'.mp4,.mov,.png,.jpg,.csv,.jpeg'">
+                 :before-upload="(file) => beforeUpload(file, ['png', 'jpg','jpeg','mp4', 'mov','gif'], 500)"
+                 :accept="'.mp4,.mov,.png,.jpg,.csv,.jpeg,.gif'">
                <el-button type="primary">点击上传</el-button>
-               <div class="el-upload__tip">支持.mp4/.mov/.png/.jpg/.jpeg格式，不超过500MB</div>
+               <div class="el-upload__tip">支持.mp4/.mov/.png/.jpg/.jpeg/.gif格式</div>
              </el-upload>
              <!-- 新增的文件链接展示区域 -->
              <div class="file-links-container" >
@@ -342,7 +352,6 @@
                  </el-input>
                </div>
              </div>
-
            </el-form-item>
            <!-- 封面图片 -->
            <el-form-item label="社区封面" prop="coverUrl">

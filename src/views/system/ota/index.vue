@@ -1,40 +1,7 @@
 <template>
    <div class="app-container">
-      <el-form :model="queryParams" ref="queryRef" v-show="showSearch" :inline="true" label-width="108px">
-         <el-form-item label="所属大类" prop="categoryName">
-            <el-input
-               v-model="queryParams.categoryName"
-               placeholder="请输入大类名称"
-               clearable
-               style="width: 240px"
-               @keyup.enter="handleQuery"
-            />
-         </el-form-item>
-        <el-form-item label="模板名" prop="templateName">
-          <el-input
-              v-model="queryParams.templateName"
-              placeholder="请输入模板名称"
-              clearable
-              style="width: 240px"
-              @keyup.enter="handleQuery"
-          />
-        </el-form-item>
-<!--         <el-form-item label="状态" prop="status">
-            <el-select
-               v-model="queryParams.status"
-               placeholder="角色状态"
-               clearable
-               style="width: 240px"
-            >
-               <el-option
-                  v-for="dict in sys_normal_disable"
-                  :key="dict.value"
-                  :label="dict.label"
-                  :value="dict.value"
-               />
-            </el-select>
-         </el-form-item>-->
-<!--         <el-form-item label="创建时间" style="width: 308px">
+      <el-form :model="queryParams" ref="queryRef" v-show="showSearch" :inline="true" label-width="68px">
+         <el-form-item label="创建时间" style="width: 308px">
             <el-date-picker
                v-model="dateRange"
                value-format="YYYY-MM-DD"
@@ -43,7 +10,7 @@
                start-placeholder="开始日期"
                end-placeholder="结束日期"
             ></el-date-picker>
-         </el-form-item>-->
+         </el-form-item>
          <el-form-item>
             <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
             <el-button icon="Refresh" @click="resetQuery">重置</el-button>
@@ -85,28 +52,12 @@
      <el-table v-loading="loading" :data="roleList" @selection-change="handleSelectionChange">
        <el-table-column type="selection" width="55" align="center" />
        <el-table-column label="编号" align="center" prop="id" width="60" />
-       <el-table-column label="所属大类" align="center" prop="categoryName"  width="90"/>
-       <el-table-column label="大类类型" align="center" prop="typeName" width="90"/>
-       <el-table-column label="模板名" align="center" prop="name"  width="180" />
-       <el-table-column label="作者" align="center" prop="author"  width="120" />
-       <el-table-column label="视频链接" align="center" prop="videoUrl" :show-overflow-tooltip="true" width="240" />
-       <el-table-column label="音频链接" align="center" prop="audioUrl" :show-overflow-tooltip="true" width="240"/>
-<!--       <el-table-column label="音频作者" prop="audioAuthor" width="80" />-->
-       <el-table-column label="动作链接" align="center" prop="actionUrl" :show-overflow-tooltip="true" width="240" />
-       <el-table-column label="封面" align="center" prop="coverUrl" :show-overflow-tooltip="true" width="240" />
-       <el-table-column label="封面内容" align="center" prop="coverContentUrl" :show-overflow-tooltip="true" width="240" />
-       <el-table-column label="官方排序" align="center" prop="officialWeight" width="120" />
-<!--       <el-table-column label="状态" align="center" width="100">
-         <template #default="scope">
-           <el-switch
-               v-model="scope.row.status"
-               active-value="0"
-               inactive-value="1"
-               @change="handleStatusChange(scope.row)"
-           ></el-switch>
-         </template>
-       </el-table-column>-->
-       <el-table-column label="创建时间" align="center" prop="createTime"  >
+       <el-table-column label="版本号" align="center" prop="version"  width="180"/>
+       <el-table-column label="哈希值" align="center" prop="packHash" :show-overflow-tooltip="true" width="580"/>
+       <el-table-column label="包大小（MB）" align="center" prop="packSize"/>
+       <el-table-column label="升级包地址" align="center" prop="packUrl" :show-overflow-tooltip="true" width="180"/>
+       <el-table-column label="说明" align="center" prop="summary"/>
+       <el-table-column label="创建时间" align="center" prop="publishTime" width="180" >
          <template #default="scope">
            <span>{{ parseTime(scope.row.createTime) }}</span>
          </template>
@@ -114,10 +65,10 @@
        <el-table-column label="操作" align="center" class-name="small-padding fixed-width" >
          <template #default="scope">
            <el-tooltip content="修改" placement="top" v-if="scope.row.roleId !== 1">
-             <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" ></el-button>
+             <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['system:role:edit']"></el-button>
            </el-tooltip>
            <el-tooltip content="删除" placement="top" v-if="scope.row.roleId !== 1">
-             <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)"></el-button>
+             <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['system:role:remove']"></el-button>
            </el-tooltip>
 <!--           <el-tooltip content="数据权限" placement="top" v-if="scope.row.roleId !== 1">
              <el-button link type="primary" icon="CircleCheck" @click="handleDataScope(scope.row)" v-hasPermi="['system:role:edit']"></el-button>
@@ -140,111 +91,19 @@
       <!-- 添加或修改角色配置对话框 -->
       <el-dialog :title="title" v-model="open" width="500px" append-to-body>
          <el-form ref="roleRef" :model="form" :rules="rules" label-width="100px">
-<!--           <el-form-item label="所属大类" prop="categoryId" >&lt;!&ndash; 此处的prop属性和提示有关&ndash;&gt;
-             <el-input v-model="form.categoryId" placeholder="请输入所属大类Id" />
-           </el-form-item>-->
-           <el-form-item label="大类类型" prop="typeName">
-             <el-select
-                 v-model="form.typeName"
-                 @change="handleTypeChange"
-                 filterable
-                 clearable
-                 placeholder="请选择大类类型"
-                 :loading="loading"
-             >
-               <el-option
-                   v-for="item in categoryTypeOptions"
-                   :key="item.id"
-                   :label="item.name"
-                   :value="item.id"
-               />
-             </el-select>
-           </el-form-item>
-           <el-form-item label="所属大类名" prop="categoryId">
-             <el-select
-                 v-model="form.categoryId"
-                 filterable
-                 clearable
-                 placeholder="请选择所属大类"
-                 :loading="loading"
-             >
-             <el-option
-                 v-for="item in categoryOptions"
-                 :key="item.id"
-                 :label="item.name"
-                 :value="item.id"
-             />
-             </el-select>
-           </el-form-item>
-            <el-form-item label="模板名称" prop="name"><!-- 此处的prop属性和提示有关-->
-               <el-input v-model="form.name" placeholder="请输入模板名称" />
-            </el-form-item>
-           <el-form-item label="模板作者" prop="author">
-             <el-input v-model="form.author" placeholder="请输入作者名" />
-           </el-form-item>
-            <el-form-item label="模板顺序" prop="officialWeight">
-               <el-input-number v-model="form.officialWeight" controls-position="right" :min="0" />
-            </el-form-item>
-           <!-- 动作文件 -->
-           <el-form-item label="动作文件" prop="actionUrl">
-             <el-upload
-                 v-model:file-list="form.actionFiles"
-                 action="/dev-api/template/upload"
-                 :on-success="(res) => handleSuccess(res, 'actionUrl')"
-                 :before-upload="(file) => beforeUpload(file, ['png', 'jpg','csv'], 50)"
-                 :accept="'.png,.jpg,.csv'">
-               <el-button type="primary">点击上传</el-button>
-               <div class="el-upload__tip">支持.png,.jpg,.csv格式，不超过50MB</div>
-<!--               <div v-if="form.actionUrl" class="upload-success">
-                 已上传：{{ form.actionUrl}}
-               </div>-->
-             </el-upload>
-             <!-- 新增的文件链接展示区域 -->
-             <div class="file-links-container" >
-               <!--               <div class="link-title">已上传文件：</div>-->
-               <div class="link-list" >
-                 <el-input
-                     v-model="form.actionUrl"
-                     readonly
-                     placeholder="未上传动作文件"
-                     class="link-input"
-                     style="width: 100%"
-                 >
-                 </el-input>
-               </div>
-             </div>
-           </el-form-item>
+           <!-- TODO 列表多选 -->
 
-           <!-- 视频文件文件 -->
-           <el-form-item label="视频文件" prop="videoUrl">
-             <el-upload
-                 v-model:file-list="form.videoFiles"
-                 action="/dev-api/template/upload"
-                 :on-success="(res) => handleSuccess(res, 'videoUrl')"
-                 :before-upload="(file) => beforeUpload(file, ['mp4', 'mov','gif'], 500)"
-                 :accept="'.mp4,.mov,.gif'">
-               <el-button type="primary">点击上传</el-button>
-               <div class="el-upload__tip">支持.mp4/.mov格式，不超过500MB</div>
-             </el-upload>
-             <!-- 新增的文件链接展示区域 -->
-             <div class="file-links-container" >
-               <!--               <div class="link-title">已上传文件：</div>-->
-               <div class="link-list">
-                 <el-input
-                     v-model="form.videoUrl"
-                     readonly
-                     placeholder="未上传动画文件"
-                     class="link-input">
-                 </el-input>
-               </div>
-             </div>
+           <el-form-item label="版本号" prop="content">
+             <el-input v-model="form.version" placeholder="请输入版本号" />
            </el-form-item>
-           <!-- 音频文件 -->
-           <el-form-item label="音频文件" prop="audioUrl">
+           <el-form-item label="说明">
+             <el-input v-model="form.summary" type="textarea" placeholder="请输入内容"/>
+           </el-form-item>
+           <el-form-item label="升级包" prop="packUrl">
              <el-upload
                  v-model:file-list="form.audioFiles"
                  action="/dev-api/template/upload"
-                 :on-success="(res) => handleSuccess(res, 'audioUrl')"
+                 :on-success="(res) => handleSuccess(res, 'packUrl', 'packHash','packSize')"
                  :before-upload="(file) => beforeUpload(file, ['mp3'], 500)"
                  :accept="'.mp3'">
                <el-button type="primary">点击上传</el-button>
@@ -255,123 +114,31 @@
                <!--               <div class="link-title">已上传文件：</div>-->
                <div class="link-list">
                  <el-input
-                     v-model="form.audioUrl"
+                     v-model="form.packUrl"
                      readonly
-                     placeholder="未上传音频文件"
+                     placeholder="地址"
                      class="link-input">
                  </el-input>
-               </div>
-             </div>
-           </el-form-item>
-           <!-- 封面图片 -->
-           <el-form-item label="模板封面" prop="coverUrl">
-             <el-upload
-                 v-model:file-list="form.coverUrlFiles"
-                 action="/dev-api/template/upload"
-                 :on-success="(res) => handleSuccess(res, 'coverUrl')"
-                 :before-upload="(file) => beforeUpload(file, ['png', 'jpg'], 500)"
-                 :accept="'.jpg,.png'">
-               <el-button type="primary">点击上传</el-button>
-               <div class="el-upload__tip">支持.jpg/.png/.jpeg格式，不超过500MB</div>
-             </el-upload>
-             <!-- 新增的文件链接展示区域 -->
-             <div class="file-links-container" >
-               <!--               <div class="link-title">已上传文件：</div>-->
-               <div class="link-list">
                  <el-input
-                     v-model="form.coverUrl"
+                     v-model="form.packHash"
                      readonly
-                     placeholder="未上传社区封面"
+                     placeholder="文件整包哈希"
                      class="link-input">
                  </el-input>
-               </div>
-             </div>
-           </el-form-item>
-           <!-- 封面对应的内容 -->
-           <el-form-item label="模板内容" prop="coverContentUrl">
-             <el-upload
-                 v-model:file-list="form.coverContentFiles"
-                 action="/dev-api/template/upload"
-                 :on-success="(res) => handleSuccess(res, 'coverContentUrl')"
-                 :before-upload="(file) => beforeUpload(file, ['mp4', 'mov'], 500)"
-                 :accept="'.mp4,.mov'">
-               <el-button type="primary">点击上传</el-button>
-               <div class="el-upload__tip">支持.mp4/.mov格式，不超过500MB</div>
-             </el-upload>
-             <!-- 新增的文件链接展示区域 -->
-             <div class="file-links-container" >
-               <!--               <div class="link-title">已上传文件：</div>-->
-               <div class="link-list">
                  <el-input
-                     v-model="form.coverContent"
+                     v-model="form.packSize"
                      readonly
-                     placeholder="未上传社区视频/图片"
+                     placeholder="文件大小（单位：MB）"
                      class="link-input">
                  </el-input>
                </div>
              </div>
            </el-form-item>
-<!--            <el-form-item label="状态">
-               <el-radio-group v-model="form.status">
-                  <el-radio
-                     v-for="dict in sys_normal_disable"
-                     :key="dict.value"
-                     :value="dict.value"
-                  >{{ dict.label }}</el-radio>
-               </el-radio-group>
-            </el-form-item>
-            <el-form-item label="备注">
-               <el-input v-model="form.remark" type="textarea" placeholder="请输入内容"></el-input>
-            </el-form-item>-->
          </el-form>
          <template #footer>
             <div class="dialog-footer">
                <el-button type="primary" @click="submitForm">确 定</el-button>
                <el-button @click="cancel">取 消</el-button>
-            </div>
-         </template>
-      </el-dialog>
-
-      <!-- 分配角色数据权限对话框 -->
-      <el-dialog :title="title" v-model="openDataScope" width="500px" append-to-body>
-         <el-form :model="form" label-width="80px">
-            <el-form-item label="角色名称">
-               <el-input v-model="form.roleName" :disabled="true" />
-            </el-form-item>
-            <el-form-item label="权限字符">
-               <el-input v-model="form.roleKey" :disabled="true" />
-            </el-form-item>
-            <el-form-item label="权限范围">
-               <el-select v-model="form.dataScope" @change="dataScopeSelectChange">
-                  <el-option
-                     v-for="item in dataScopeOptions"
-                     :key="item.value"
-                     :label="item.label"
-                     :value="item.value"
-                  ></el-option>
-               </el-select>
-            </el-form-item>
-            <el-form-item label="数据权限" v-show="form.dataScope == 2">
-               <el-checkbox v-model="deptExpand" @change="handleCheckedTreeExpand($event, 'dept')">展开/折叠</el-checkbox>
-               <el-checkbox v-model="deptNodeAll" @change="handleCheckedTreeNodeAll($event, 'dept')">全选/全不选</el-checkbox>
-               <el-checkbox v-model="form.deptCheckStrictly" @change="handleCheckedTreeConnect($event, 'dept')">父子联动</el-checkbox>
-               <el-tree
-                  class="tree-border"
-                  :data="deptOptions"
-                  show-checkbox
-                  default-expand-all
-                  ref="deptRef"
-                  node-key="id"
-                  :check-strictly="!form.deptCheckStrictly"
-                  empty-text="加载中，请稍候"
-                  :props="{ label: 'label', children: 'children' }"
-               ></el-tree>
-            </el-form-item>
-         </el-form>
-         <template #footer>
-            <div class="dialog-footer">
-               <el-button type="primary" @click="submitDataScope">确 定</el-button>
-               <el-button @click="cancelDataScope">取 消</el-button>
             </div>
          </template>
       </el-dialog>
@@ -384,28 +151,21 @@ import {
   changeRoleStatus,
   dataScope,
   delRole,
+  addPost,
   getRole,
   listRole,
   updateRole,
-  deptTreeSelect,
-  getCategoryListByTypeId
-} from "@/api/system/template";
+  getActiveCategoryList,
+  deptTreeSelect, changeFeaturedStatus, getTopicList, getActivityList, getUserList
+  //getCategoryListByTypeId
+} from "@/api/system/ota";
 import { roleMenuTreeselect, treeselect as menuTreeselect } from "@/api/system/menu";
 import { ref, reactive, onMounted } from 'vue'
-import { getCategoryList } from '@/api/system/template'
-import { getCategoryTypeList } from '@/api/system/category'
-
-// 下拉选项数据
-const categoryOptions = ref([])
-
-// 生命周期：组件挂载时加载数据
-onMounted(async () => {
-  await loadCategoryType()
-})
+//import { getCategoryList } from '@/api/system/template'
+//import { getActiveCategoryTypeList } from '@/api/system/postRecord'
 
 // 当一级选择变化时
 const handleTypeChange = async (typeId) => {
-  console.log("why")
   // 1. 立即清空二级分类的值和选项
   form.value.categoryId = null;     // 清空选中值
     // 清空旧选项（注意使用.value）
@@ -423,22 +183,37 @@ const handleTypeChange = async (typeId) => {
   }
 }
 
-// 下拉选项数据
+/**
+ * 下拉框数据
+ * 内容一级大类
+ * 话题列表多选
+ * 活动列表
+ * @type {Ref<UnwrapRef<*[]>>}
+ */
 const categoryTypeOptions = ref([])
+const topicOptions = ref([])
+const activityOptions = ref([])
+const userOptions = ref([])
 
 // 生命周期：组件挂载时加载数据
 onMounted(async () => {
   await loadCategoryType()
+  await loadTopic()
+  await loadActivity()
+  await loadUserList()
 })
 
-// 加载大类类型数据方法
+/**
+ * 加载大类类型数据方法
+ * @returns {Promise<void>}
+ */
 const loadCategoryType = async () => {
   try {
     loading.value = true
-    const res = await getCategoryTypeList() // 调用后端接口
+    const res = await getActiveCategoryList() // 调用后端接口
     categoryTypeOptions.value = res.data.map(item => ({
-      id: item.typeId,
-      name: item.typeName // 根据实际接口字段调整
+      id: item.id,
+      name: item.name
     }))
   } catch (error) {
     console.error('加载分类数据失败:', error)
@@ -448,19 +223,56 @@ const loadCategoryType = async () => {
   }
 }
 
-// 加载大类名数据方法
-const loadCategories = async () => {
+/**
+ * 加载话题列表
+ * @returns {Promise<void>}
+ */
+const loadTopic = async () => {
   try {
     loading.value = true
-    const res = await getCategoryList() // 调用后端接口
-    categoryOptions.value = res.data.map(item => ({
+    const res = await getTopicList() // 调用后端接口
+    topicOptions.value = res.data.map(item => ({
       id: item.id,
-      name: item.name // 根据实际接口字段调整
+      name: item.name
     }))
   } catch (error) {
     console.error('加载分类数据失败:', error)
     ElMessage.error('分类数据加载失败')
   } finally {
+    loading.value = false
+  }
+}
+
+const loadUserList = async () =>{
+  try {
+    loading.value = true
+    const res = await getUserList()
+    userOptions.value = res.data.map(item =>({
+      id: item.id,
+      name: item.username
+    }))
+  }catch (error){
+    ElMessage.error('加载发布者列表失败')
+  }finally {
+    loading.value = false
+  }
+}
+
+/**
+ * 加载活动列表
+ * @returns {Promise<void>}
+ */
+const loadActivity = async () =>{
+  try {
+    loading.value = true
+    const res = await getActivityList()
+    activityOptions.value = res.data.map(item => ({
+      id: item.id,
+      name: item.name
+    }))
+  }catch (error){
+    ElMessage.error('加载可选活动列表失败')
+  }finally {
     loading.value = false
   }
 }
@@ -487,7 +299,7 @@ const props = defineProps({
 
 const router = useRouter();
 const { proxy } = getCurrentInstance();
-const { sys_normal_disable } = proxy.useDict("sys_normal_disable");
+const { sys_post_featured } = proxy.useDict("sys_post_featured");
 
 const roleList = ref([]);
 const open = ref(false);
@@ -508,15 +320,6 @@ const deptOptions = ref([]);
 const openDataScope = ref(false);
 const menuRef = ref(null);
 const deptRef = ref(null);
-
-/** 数据范围选项*/
-const dataScopeOptions = ref([
-  { value: "1", label: "全部数据权限" },
-  { value: "2", label: "自定数据权限" },
-  { value: "3", label: "本部门数据权限" },
-  { value: "4", label: "本部门及以下数据权限" },
-  { value: "5", label: "仅本人数据权限" }
-]);
 
 const data = reactive({
   form: {},
@@ -565,7 +368,7 @@ function resetQuery() {
 /** 删除按钮操作 */
 function handleDelete(row) {
   const id = row.id || ids.value;
-  proxy.$modal.confirm('是否确认删除角色编号为"' + id + '"的数据项?').then(function () {
+  proxy.$modal.confirm('是否确认删除编号为"' + id + '"的数据项?').then(function () {
     return delRole(id);
   }).then(() => {
     getList();
@@ -574,9 +377,12 @@ function handleDelete(row) {
 }
 
 // 统一上传成功处理
-function handleSuccess(res, field) {
+function handleSuccess(res, field,filed1,field2) {
   if (res.code === 200) {
-    this.form[field] = res.msg
+    debugger
+    this.form[field] = res.data.url;
+    this.form[filed1] = res.data.hash;
+    this.form[field2] = res.data.size;
     /*console.log("this.message:"+this.form["fileList"]);*/
     //this.$message.success(`${field}上传成功`)
   }
@@ -619,15 +425,15 @@ function handleSelectionChange(selection) {
   multiple.value = !selection.length;
 }
 
-/** 角色状态修改 */
+/** 精选状态修改 */
 function handleStatusChange(row) {
-  let text = row.status === "0" ? "启用" : "停用";
-  proxy.$modal.confirm('确认要"' + text + '""' + row.roleName + '"角色吗?').then(function () {
-    return changeRoleStatus(row.roleId, row.status);
+  let text = row.isFeatured === 1 ? "精选" : "非精选";
+  proxy.$modal.confirm('确认要将"' +row.id + '"设置为' +text +'吗？').then(function () {
+    return changeFeaturedStatus(row.id, row.isFeatured);
   }).then(() => {
     proxy.$modal.msgSuccess(text + "成功");
   }).catch(function () {
-    row.status = row.status === "0" ? "1" : "0";
+    row.isFeatured = row.isFeatured === "0" ? "1" : "0";
   });
 }
 
@@ -683,7 +489,7 @@ function reset() {
     officialWeight: 0,
     actionUrl:undefined,
     status: "0",
-    actionFiles:[],
+    packFiles:[],
     videoFiles:[],
     audioFiles:[],
     coverUrlFiles:[],
@@ -701,15 +507,25 @@ function reset() {
 function handleAdd() {
   reset();
   open.value = true;
-  title.value = "添加模板";
+  title.value = "发布内容";
 }
 
 /** 修改模板 */
 function handleUpdate(row) {
   reset();
   const id = row.id || ids.value;
+  const actionUrl = row.actionUrl;
+  const imageUrl = row.imageUrl;
+  const audioUrl = row.audioUrl;
+  const coverUrl = row.coverUrl;
+  const coverContent = row.coverContent;
   getRole(id).then(response => {
+    debugger
     form.value = response.data;
+    form.actionUrl = actionUrl;
+    form.imageUrl = imageUrl;
+    form.coverUrl = coverUrl;
+    form.coverContent = coverContent;
     open.value = true;
     nextTick(() => {
       roleMenu.then((res) => {
@@ -722,7 +538,7 @@ function handleUpdate(row) {
       });
     });
   });
-  title.value = "修改角色";
+  title.value = "修改发布内容";
 }
 
 /** 根据角色ID查询菜单树结构 */
@@ -795,7 +611,7 @@ function submitForm() {
           getList();
         });
       } else {
-        addRole(form.value).then(response => {
+        addPost(form.value).then(response => {
           proxy.$modal.msgSuccess("新增成功");
           open.value = false;
           getList();

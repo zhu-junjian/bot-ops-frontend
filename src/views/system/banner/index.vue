@@ -102,8 +102,9 @@
        <el-table-column type="selection" width="55" align="center" />
        <el-table-column label="编号" align="center" prop="id" width="60" />
        <el-table-column label="名称" align="center" prop="name" />
-       <el-table-column label="背景图" align="center" prop="backgroundUrl" :show-overflow-tooltip="true" width="740"/>
-       <el-table-column label="目标地址" align="center" prop="targetUrl" :show-overflow-tooltip="true" width="740" />
+       <el-table-column label="封面" align="center" prop="backgroundUrl" :show-overflow-tooltip="true" width="580"/>
+       <el-table-column label="内容" align="center" prop="contentUrl" :show-overflow-tooltip="true" width="580"/>
+       <el-table-column label="落地页" align="center" prop="targetUrl" :show-overflow-tooltip="true" width="580" />
        <el-table-column label="官方排序" align="center" prop="weight"  width="80" />
 <!--       <el-table-column label="是否精选" align="center" width="100" prop="isFeatured">
          <template #default="scope">
@@ -156,19 +157,40 @@
                <el-input-number v-model="form.weight" controls-position="right" :min="0" />
             </el-form-item>
            <!-- 封面图片 -->
-           <el-form-item label="背景图" prop="backgroundUrl">
+           <el-form-item label="封面" prop="backgroundUrl">
              <el-upload
-                 v-model:file-list="form.coverUrlFiles"
+                 v-model:file-list="form.backgroundUrlFiles"
                  action="/dev-api/template/upload"
                  :on-success="(res) => handleSuccess(res, 'backgroundUrl')"
-                 :before-upload="(file) => beforeUpload(file, ['png', 'jpg','jpeg'], 500)"
-                 :accept="'.jpg,.png,.jpeg'">
+                 :before-upload="(file) => beforeUpload(file, ['png', 'jpg','jpeg','mov', 'mp4'], 500)"
+                 :accept="'.jpg,.png,.jpeg,.mov,.mp4'">
                <el-button type="primary">点击上传</el-button>
-               <div class="el-upload__tip">支持.jpg/.png/.jpeg</div>
+               <div class="el-upload__tip">支持.jpg/.png/.jpeg/.mov/.mp4</div>
              </el-upload>
            </el-form-item>
-           <el-form-item label="目标地址" prop="targetUrl">
-             <el-input v-model="form.targetUrl" placeholder="请输入目标地址" />
+           <!-- 内容-->
+           <el-form-item label="内容" prop="contentUrl">
+             <el-upload
+                 v-model:file-list="form.contentUrlFiles"
+                 action="/dev-api/template/upload"
+                 :on-success="(res) => handleSuccess(res, 'contentUrl')"
+                 :before-upload="(file) => beforeUpload(file, ['png', 'jpg','jpeg','mov', 'mp4'], 500)"
+                 :accept="'.jpg,.png,.jpeg,.mov,.mp4'">
+               <el-button type="primary">点击上传</el-button>
+               <div class="el-upload__tip">支持.jpg/.png/.jpeg/.mov/.mp4</div>
+             </el-upload>
+           </el-form-item>
+           <!-- 落地页-->
+           <el-form-item label="落地页" prop="targetUrl">
+             <el-upload
+                 v-model:file-list="form.targetUrlFiles"
+                 action="/dev-api/template/upload"
+                 :on-success="(res) => handleSuccess(res, 'targetUrl')"
+                 :before-upload="(file) => beforeUpload(file, ['png', 'jpg','jpeg','mov', 'mp4'], 500)"
+                 :accept="'.jpg,.png,.jpeg,.mov,.mp4'">
+               <el-button type="primary">点击上传</el-button>
+               <div class="el-upload__tip">支持.jpg/.png/.jpeg/.mov/.mp4</div>
+             </el-upload>
            </el-form-item>
          </el-form>
          <template #footer>
@@ -524,6 +546,9 @@ function reset() {
     videoFiles:[],
     audioFiles:[],
     coverUrlFiles:[],
+    backgroundUrlFiles:[],
+    contentUrlFiles:[],
+    targetUrlFiles:[],
     coverContentFiles:[],
     menuIds: [],
     deptIds: [],

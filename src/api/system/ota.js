@@ -4,7 +4,7 @@ import request from '@/utils/request'
 export function listRole(query) {
   return request({
     //url: '/system/role/list',
-    url: '/template/list',
+    url: '/ota/list',
     method: 'get',
     params: query
   })
@@ -14,6 +14,47 @@ export function listRole(query) {
 export function getCategoryList() {
   return request({
     url: '/category/listMap',
+    method: 'get',
+    params: ''
+  })
+}
+
+// 查询启用状态下的内容大类
+export function getActiveCategoryList() {
+  return request({
+    url: '/flCategory/listMap',
+    method: 'get',
+    params: ''
+  })
+}
+
+/**
+ * 查询后端话题列表信息
+ * @returns {*}
+ */
+export function getTopicList() {
+  return request({
+    url: '/topic/listMap',
+    method: 'get',
+    params: ''
+  })
+}
+
+export function getUserList(){
+  return request({
+    url: '/corm/user/listMap',
+    method: 'get',
+    params: ''
+  })
+}
+
+/**
+ * 查询后端可选活动列表
+ * @returns {*}
+ */
+export function getActivityList() {
+  return request({
+    url: '/activity/listMap',
     method: 'get',
     params: ''
   })
@@ -29,9 +70,9 @@ export function getCategoryListByTypeId(typeId) {
 }
 
 // 查询角色详细
-export function getRole(id) {
+export function getRole(roleId) {
   return request({
-    url: '/template/' + id,
+    url: '/ota/' + roleId,
     method: 'get'
   })
 }
@@ -39,7 +80,16 @@ export function getRole(id) {
 // 新增角色
 export function addRole(data) {
   return request({
-    url: '/template',
+    url: '/ota',
+    method: 'post',
+    data: data
+  })
+}
+
+// 新增角色
+export function addPost(data) {
+  return request({
+    url: '/ota',
     method: 'post',
     data: data
   })
@@ -48,7 +98,7 @@ export function addRole(data) {
 // 修改角色
 export function updateRole(data) {
   return request({
-    url: '/template',
+    url: '/ota',
     method: 'put',
     data: data
   })
@@ -76,10 +126,23 @@ export function changeRoleStatus(roleId, status) {
   })
 }
 
+// 内容精选
+export function changeFeaturedStatus(id, isFeatured) {
+  const data = {
+    id,
+    isFeatured
+  }
+  return request({
+    url: '/post/isFeatured',
+    method: 'put',
+    data: data
+  })
+}
+
 // 删除角色
 export function delRole(id) {
   return request({
-    url: '/template/' + id,
+    url: '/ota/' + id,
     method: 'delete'
   })
 }

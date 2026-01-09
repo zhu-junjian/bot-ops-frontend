@@ -87,6 +87,7 @@
        <el-table-column label="大类编号" align="center" prop="id"  width="120"/>
        <el-table-column label="大类类型" align="center" prop="typeName"  width="120"/>
        <el-table-column label="大类名称" align="center" prop="name"  width="120" />
+       <el-table-column label="官方排序" align="center" prop="officialWeight"  width="120" />
 <!--       <el-table-column label="视频链接" prop="videoUrl" :show-overflow-tooltip="true" width="200" />
        <el-table-column label="音频链接" prop="audioUrl" :show-overflow-tooltip="true" width="200" />
        <el-table-column label="音频作者" prop="audioAuthor" width="80" />
@@ -106,6 +107,11 @@
        <el-table-column label="创建时间" align="center" prop="createTime"  >
          <template #default="scope">
            <span>{{ parseTime(scope.row.createTime) }}</span>
+         </template>
+       </el-table-column>
+       <el-table-column label="修改时间" align="center" prop="updateTime"  >
+         <template #default="scope">
+           <span>{{ parseTime(scope.row.updateTime) }}</span>
          </template>
        </el-table-column>
        <el-table-column label="操作" align="center" class-name="small-padding fixed-width" >
@@ -156,7 +162,9 @@
             <el-form-item label="大类名称" prop="name"> <!-- 此处的name负责校验提示-->
                <el-input v-model="form.name" placeholder="请输入大类名称" />
             </el-form-item>
-
+           <el-form-item label="官方排序" prop="officialWeight">
+             <el-input-number v-model="form.officialWeight" controls-position="right" :min="0" />
+           </el-form-item>
 <!--            <el-form-item prop="roleKey">
                <template #label>
                   <span>
@@ -348,7 +356,8 @@ const data = reactive({
   },
   rules: {
     name: [{ required: true, message: "大类名称不能为空", trigger: "blur" }],
-    type: [{required:true, message: "大类类型不能为空", trigger: "blur"}]
+    type: [{required:true, message: "大类类型不能为空", trigger: "blur"}],
+    officialWeight: [{ required: true, message: "模板顺序不能为空", trigger: "blur" }]
   },
 });
 
@@ -464,6 +473,7 @@ function reset() {
     roleName: undefined,
     roleKey: undefined,
     roleSort: 0,
+    officialWeight: 0,
     status: "0",
     menuIds: [],
     deptIds: [],
