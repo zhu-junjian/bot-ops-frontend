@@ -1,5 +1,61 @@
 import request from '@/utils/request'
 
+// 社区大类调整
+// 查询分类列表（树形结构）
+export function listCategory(query) {
+  return request({
+    url: '/categoryTree/categoryTreeMap', // 替换为你真实的后端路径
+    method: 'get',
+    params: query
+  })
+}
+
+//查询完整分类树
+export function getCategoryTree() {
+  return request({
+    url: '/categoryTree/categoryTreeMap/',
+    method: 'get'
+  })
+}
+
+// 查询分类详细
+export function getCategory(id) {
+  return request({
+    url: '/categoryTree/category/' + id,
+    method: 'get'
+  })
+}
+
+// 新增分类
+export function addCategory(data) {
+  return request({
+    url: '/categoryTree',
+    method: 'post',
+    data: data
+  })
+}
+
+// 修改分类
+export function updateCategory(data) {
+  return request({
+    url: '/categoryTree/category',
+    method: 'put',
+    data: data
+  })
+}
+
+// 删除分类
+export function delCategory(id) {
+  return request({
+    url: '/categoryTree/category/' + id,
+    method: 'delete'
+  })
+}
+
+
+
+
+
 // 查询角色列表
 export function listRole(query) {
   return request({

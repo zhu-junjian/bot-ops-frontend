@@ -19,23 +19,19 @@
               @keyup.enter="handleQuery"
           />
         </el-form-item>
-        <el-form-item label="内容一级大类" prop="firstLevelCategoryId" label-width="128px">
-          <el-select
+
+        <!-- 分类搜索 -->
+        <el-form-item label="分类搜索" prop="firstLevelCategoryId" label-width="100px">
+          <el-cascader
               style="width: 240px;"
               v-model="queryParams.firstLevelCategoryId"
-              @change="handleTypeChange"
+              :options="categoryTypeOptions"
+              :props="{ value: 'id', label: 'name', children: 'children', checkStrictly: true, emitPath: false }"
               filterable
               clearable
-              placeholder="请选择大类类型"
-              :loading="loading"
-          >
-          <el-option
-              v-for="item in categoryTypeOptions"
-              :key="item.id"
-              :label="item.name"
-              :value="item.id"
+              placeholder="请选择大类"
+              @change="handleQuery"
           />
-          </el-select>
         </el-form-item>
         <el-form-item label="是否精选" prop="isFeatured">
           <el-select
@@ -52,31 +48,6 @@
             />
           </el-select>
         </el-form-item>
-
-<!--        <el-form-item label="是否精选" prop="isFeatured">
-          <el-input
-              v-model="queryParams.isFeatured"
-              placeholder=""
-              clearable
-              style="width: 240px"
-              @keyup.enter="handleQuery"
-          />
-        </el-form-item>-->
-<!--         <el-form-item label="状态" prop="status">
-            <el-select
-               v-model="queryParams.status"
-               placeholder="角色状态"
-               clearable
-               style="width: 240px"
-            >
-               <el-option
-                  v-for="dict in sys_normal_disable"
-                  :key="dict.value"
-                  :label="dict.label"
-                  :value="dict.value"
-               />
-            </el-select>
-         </el-form-item>-->
          <el-form-item label="创建时间" style="width: 308px">
             <el-date-picker
                v-model="dateRange"
@@ -112,63 +83,107 @@
 
             >删除</el-button>
          </el-col>
-<!--         <el-col :span="1.5">
-            <el-button
-               type="warning"
-               plain
-               icon="Download"
-               @click="handleExport"
-               v-hasPermi="['system:role:export']"
-            >导出</el-button>
-         </el-col>-->
          <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
       </el-row>
 
       <!-- 表格数据 -->
-     <el-table v-loading="loading" :data="roleList" @selection-change="handleSelectionChange">
+     <el-table
+         v-loading="loading"
+         :data="roleList"
+         row-key="id"
+         style="width: 100%"
+         @selection-change="handleSelectionChange"
+     >
        <el-table-column type="selection" width="55" align="center" />
-       <el-table-column label="编号" align="center" prop="id" width="60" />
-       <el-table-column label="标题" align="center" prop="content"  width="180"/>
-       <el-table-column label="视频链接" align="center" prop="imageUrl" :show-overflow-tooltip="true" width="180"/>
-       <el-table-column label="音频链接" align="center" prop="audioUrl" :show-overflow-tooltip="true" width="180"/>
-       <el-table-column label="动作链接" align="center" prop="actionUrl" :show-overflow-tooltip="true" width="180" />
-       <el-table-column label="社区视频/图片" align="center" prop="coverContent" :show-overflow-tooltip="true" width="180" />
-       <el-table-column label="社区封面" align="center" prop="coverUrl" :show-overflow-tooltip="true" width="180" />
-       <el-table-column label="官方排序" align="center" prop="officialWeight"  width="80" />
-       <el-table-column label="一级大类" align="center" prop="firstLevelCategoryName"  width="130" />
-       <el-table-column label="所属活动" align="center" prop="activityName"  width="130" />
-       <el-table-column label="话题标签" align="center" prop="topicsName"  width="130" />
-       <el-table-column label="发布人昵称" align="center" prop="nickName"  width="180" />
-       <el-table-column label="点赞数" align="center" prop="likeCount"  width="80" />
-       <el-table-column label="是否精选" align="center" width="100" prop="isFeatured">
+       <el-table-column label="编号" align="center" prop="id" width="70" />
+
+       <el-table-column label="分类层级" align="center" width="400">
+         <template #default="scope">
+           <el-breadcrumb separator="/">
+             <el-breadcrumb-item>{{ scope.row.flcName }}</el-breadcrumb-item>
+             <el-breadcrumb-item>{{ scope.row.slcName }}</el-breadcrumb-item>
+             <el-breadcrumb-item>{{ scope.row.tlcName }}</el-breadcrumb-item>
+             <el-breadcrumb-item>{{ scope.row.folcName }}</el-breadcrumb-item>
+           </el-breadcrumb>
+         </template>
+       </el-table-column>
+       <el-table-column label="所属合辑" align="center" prop="collectionName" min-width="120" :show-overflow-tooltip="true" />
+       <el-table-column label="标题" align="center" prop="contentName" min-width="120" :show-overflow-tooltip="true" />
+
+       <el-table-column label="内容权限" align="center" prop="contentType" min-width="120" :show-overflow-tooltip="true" />
+       <el-table-column label="付费类型" align="center" width="100">
+         <template #default="scope">
+           <el-tag :type="scope.row.premiumType === 1 ? 'danger' : 'success'">
+             {{ scope.row.premiumType === 1 ? '付费' : '免费' }}
+           </el-tag>
+         </template>
+       </el-table-column>
+
+       <el-table-column label="视频链接" align="center" prop="mediaUrl" :show-overflow-tooltip="true" width="80" />
+       <el-table-column label="音频链接" align="center" prop="audioUrl" :show-overflow-tooltip="true" width="80" />
+       <el-table-column label="动作链接" align="center" prop="actionUrl" :show-overflow-tooltip="true" width="80" />
+       <el-table-column label="社区封面" align="center" prop="coverUrl" :show-overflow-tooltip="true" width="80" />
+       <el-table-column label="社区视频" align="center" prop="coverContent" :show-overflow-tooltip="true" width="80" />
+       <el-table-column label="发布人" align="center" prop="nickName" width="120" />
+
+       <el-table-column label="点赞/收藏" align="center" width="120">
+         <template #default="scope">
+           <span>{{ scope.row.likeCount }} / {{ scope.row.collectCount }}</span>
+         </template>
+       </el-table-column>
+       <el-table-column label="官方排序" align="center" prop="officialWeight" width="80" />
+
+       <el-table-column label="精选" align="center" width="80">
          <template #default="scope">
            <el-switch
                v-model="scope.row.isFeatured"
                :active-value="1"
                :inactive-value="0"
+               @change="handleFeaturedChange(scope.row)"
+           ></el-switch>
+         </template>
+       </el-table-column>
+
+       <el-table-column label="上下架" align="center" width="80">
+         <template #default="scope">
+           <el-switch
+               v-model="scope.row.status"
+               :active-value=0
+               :inactive-value=1
+               active-color="#13ce66"
+               inactive-color="#ff4949"
                @change="handleStatusChange(scope.row)"
            ></el-switch>
          </template>
        </el-table-column>
-       <el-table-column label="创建时间" align="center" prop="publishTime" width="180" >
+
+       <el-table-column label="发布时间" align="center" prop="publishTime" width="120">
          <template #default="scope">
            <span>{{ parseTime(scope.row.publishTime) }}</span>
          </template>
        </el-table-column>
-       <el-table-column label="操作" align="center" class-name="small-padding fixed-width" >
+       <el-table-column label="更新时间" align="center" prop="updateTime" width="120">
          <template #default="scope">
-           <el-tooltip content="修改" placement="top" v-if="scope.row.roleId !== 1">
-             <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['system:role:edit']"></el-button>
-           </el-tooltip>
-           <el-tooltip content="删除" placement="top" v-if="scope.row.roleId !== 1">
-             <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['system:role:remove']"></el-button>
-           </el-tooltip>
-<!--           <el-tooltip content="数据权限" placement="top" v-if="scope.row.roleId !== 1">
-             <el-button link type="primary" icon="CircleCheck" @click="handleDataScope(scope.row)" v-hasPermi="['system:role:edit']"></el-button>
-           </el-tooltip>
-           <el-tooltip content="分配用户" placement="top" v-if="scope.row.roleId !== 1">
-             <el-button link type="primary" icon="User" @click="handleAuthUser(scope.row)" v-hasPermi="['system:role:edit']"></el-button>
-           </el-tooltip>-->
+           <span>{{ parseTime(scope.row.updateTime) }}</span>
+         </template>
+       </el-table-column>
+
+       <el-table-column label="操作" align="center" fixed="right" width="120">
+         <template #default="scope">
+           <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)">修改</el-button>
+           <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)">删除</el-button>
+           <el-button
+               link
+               type="primary"
+               icon="Share"
+               @click="handleOrgPrivilege(scope.row)"
+           >权限下发</el-button>
+           <el-button
+               link
+               type="primary"
+               icon="UserFilled"
+               @click="handleUserPermission(scope.row)"
+           >付费授权</el-button>
          </template>
        </el-table-column>
      </el-table>
@@ -180,35 +195,126 @@
          v-model:limit="queryParams.pageSize"
          @pagination="getList"
       />
+     <!-- 权限下发 -->
+     <el-dialog title="权限下发至机构" v-model="openOrgDialog" width="450px" append-to-body>
+       <div style="max-height: 400px; overflow-y: auto;">
+         <el-tree
+             ref="deptTreeRef"
+             :data="orgOptions"
+             show-checkbox
+             node-key="id"
+             default-expand-all
+             :check-strictly="true"
+             :props="{ label: 'orgName' }"
+         >
+           <template #default="{ node, data }">
+            <span class="custom-tree-node">
+              <el-icon style="margin-right: 5px; vertical-align: middle;"><OfficeBuilding /></el-icon>
+              <span>{{ data.orgName }}</span>
+            </span>
+           </template>
+         </el-tree>
+       </div>
+
+       <template #footer>
+         <div class="dialog-footer">
+           <el-button type="primary" @click="submitOrgPrivilege">确 定</el-button>
+           <el-button @click="openOrgDialog = false">取 消</el-button>
+         </div>
+       </template>
+     </el-dialog>
 
       <!-- 添加或修改角色配置对话框 -->
       <el-dialog :title="title" v-model="open" width="500px" append-to-body>
          <el-form ref="roleRef" :model="form" :rules="rules" label-width="100px">
-<!--           <el-form-item label="所属大类" prop="categoryId" >&lt;!&ndash; 此处的prop属性和提示有关&ndash;&gt;
-             <el-input v-model="form.categoryId" placeholder="请输入所属大类Id" />
-           </el-form-item>-->
-           <el-form-item label="内容一级大类" prop="firstLevelCategory">
-             <el-select
-                 v-model="form.firstLevelCategory"
-                 @change="handleTypeChange"
+           <el-form-item label="发布分类" prop="categoryId">
+             <el-cascader
+                 v-model="form.categoryId"
+                 :options="categoryTypeOptions"
+                 :props="{
+                    value: 'id',
+                    label: 'name',
+                    children: 'children',
+                    checkStrictly: true,
+                    emitPath: false
+                  }"
+                 placeholder="请选择分类"
                  filterable
                  clearable
-                 placeholder="请选择大类类型"
-                 :loading="loading"
+                 @change="handleCategoryChange"
+                 style="width: 100%"
+             />
+           </el-form-item>
+
+           <el-form-item label="内容类型">
+             <el-radio-group v-model="form.postType" @change="handlePostTypeChange">
+               <el-radio :label="0">普通内容</el-radio>
+               <el-radio :label="1">合辑主内容</el-radio>
+               <el-radio :label="2">合辑子内容</el-radio>
+             </el-radio-group>
+           </el-form-item>
+
+           <el-form-item
+               v-if="form.postType === 2"
+               label="所属合辑"
+               prop="parentPostId"
+               :rules="[{ required: true, message: '请选择所属合辑', trigger: 'change' }]"
+           >
+             <el-select
+                 v-model="form.parentPostId"
+                 placeholder="请先选择分类再选择合辑"
+                 filterable
+                 style="width: 100%"
              >
                <el-option
-                   v-for="item in categoryTypeOptions"
+                   v-for="item in parentPostOptions"
                    :key="item.id"
-                   :label="item.name"
+                   :label="item.content"
                    :value="item.id"
                />
              </el-select>
            </el-form-item>
+           <el-row>
+             <el-col :span="12">
+               <el-form-item label="查看权限">
+                 <el-radio-group v-model="form.visibility">
+                   <el-radio :label="0">公共</el-radio>
+                   <el-radio :label="1">私有</el-radio>
+                 </el-radio-group>
+               </el-form-item>
+             </el-col>
+             <el-col :span="12">
+               <el-form-item label="付费类型">
+                 <el-radio-group v-model="form.isPremium">
+                   <el-radio :label="0">免费</el-radio>
+                   <el-radio :label="1">付费</el-radio>
+                 </el-radio-group>
+               </el-form-item>
+             </el-col>
+           </el-row>
+
+           <el-row>
+             <el-col :span="12">
+               <el-form-item label="是否精选">
+                 <el-radio-group v-model="form.isFeatured">
+                   <el-radio :label="1">是</el-radio>
+                   <el-radio :label="0">否</el-radio>
+                 </el-radio-group>
+               </el-form-item>
+             </el-col>
+             <el-col :span="12">
+               <el-form-item label="发布状态">
+                 <el-radio-group v-model="form.status">
+                   <el-radio :label="0">上架</el-radio>
+                   <el-radio :label="1">下架</el-radio>
+                 </el-radio-group>
+               </el-form-item>
+             </el-col>
+           </el-row>
            <!-- TODO 列表多选 -->
            <el-form-item label="话题标签" prop="topicIds">
              <el-select
                  v-model="form.topicIds"
-                 @change="handleTypeChange"
                  filterable
                  clearable
                  multiple
@@ -227,7 +333,6 @@
            <el-form-item label="所属活动" prop="activityId">
              <el-select
                  v-model="form.activityId"
-                 @change="handleTypeChange"
                  filterable
                  clearable
                  placeholder="请选择所属活动"
@@ -244,7 +349,6 @@
            <el-form-item label="发布用户" prop="userId">
              <el-select
                  v-model="form.userId"
-                 @change="handleTypeChange"
                  filterable
                  clearable
                  placeholder="请选择发布用户"
@@ -258,101 +362,93 @@
                />
              </el-select>
            </el-form-item>
-           <el-form-item label="内容标题" prop="content">
+           <el-form-item label="标题" prop="content">
              <el-input v-model="form.content" placeholder="请输入标题" />
            </el-form-item>
             <el-form-item label="官方排序" prop="officialWeight">
                <el-input-number v-model="form.officialWeight" controls-position="right" :min="0" />
             </el-form-item>
-<!--           <el-form-item label="是否精选" prop="isFeatured">
-             <template #default="scope">
-               <el-switch
-                   v-model="scope.row.isFeatured"
-                   :active-value="1"
-                   :inactive-value="0"
-                   @change="handleStatusChange(scope.row)"
-               ></el-switch>
-             </template>
-           </el-form-item>-->
-           <!-- 动作文件 -->
-           <el-form-item label="动作文件" prop="actionUrl">
-             <!-- 文件链接 -->
-             <el-upload
-                 v-model:file-list="form.actionFiles"
-                 action="/dev-api/template/upload"
-                 :on-success="(res) => handleSuccess(res, 'actionUrl')"
-                 :before-upload="(file) => beforeUpload(file, ['png', 'jpg','csv'], 500)"
-                 :accept="'.png,.jpg,.csv'"
-                 data-value="item.actionUrl"
-             >
-               <el-button type="primary">点击上传</el-button>
-               <div class="el-upload__tip">支持.png/.jpg/.csv格式，不超过500MB</div>
-             </el-upload>
+           <template v-if="form.postType !== 1">
+             <el-form-item label="动作文件" prop="actionUrl">
+               <!-- 文件链接 -->
+               <el-upload
+                   v-model:file-list="form.actionFiles"
+                   action="/dev-api/template/upload"
+                   :on-success="(res) => handleSuccess(res, 'actionUrl')"
+                   :before-upload="(file) => beforeUpload(file, ['png', 'jpg','csv'], 500)"
+                   :accept="'.png,.jpg,.csv'"
+                   data-value="item.actionUrl"
+               >
+                 <el-button type="primary">点击上传</el-button>
+                 <div class="el-upload__tip">支持.png/.jpg/.csv格式，不超过500MB</div>
+               </el-upload>
 
-             <!-- 新增的文件链接展示区域 -->
-             <div class="file-links-container" >
-<!--               <div class="link-title">已上传文件：</div>-->
-               <div class="link-list" >
+               <!-- 新增的文件链接展示区域 -->
+               <div class="file-links-container" >
+  <!--               <div class="link-title">已上传文件：</div>-->
+                 <div class="link-list" >
+                     <el-input
+                         v-model="form.actionUrl"
+                         readonly
+                         placeholder="未上传动作文件"
+                         class="link-input"
+                         style="width: 100%"
+                     >
+                     </el-input>
+                 </div>
+               </div>
+             </el-form-item>
+
+             <!-- 视频文件文件 -->
+             <el-form-item label="动画文件" prop="mediaUrl">
+               <el-upload
+                   v-model:file-list="form.videoFiles"
+                   action="/dev-api/template/upload"
+                   :on-success="(res) => handleSuccess(res, 'mediaUrl')"
+                   :before-upload="(file) => beforeUpload(file, ['png', 'jpg','jpeg','mp4', 'mov','gif'], 500)"
+                   :accept="'.mp4,.mov,.png,.jpg,.csv,.jpeg,.gif'">
+                 <el-button type="primary">点击上传</el-button>
+                 <div class="el-upload__tip">支持.mp4/.mov/.png/.jpg/.jpeg/.gif格式</div>
+               </el-upload>
+               <!-- 新增的文件链接展示区域 -->
+               <div class="file-links-container" >
+                 <!--               <div class="link-title">已上传文件：</div>-->
+                 <div class="link-list">
                    <el-input
-                       v-model="form.actionUrl"
+                       v-model="form.mediaUrl"
                        readonly
-                       placeholder="未上传动作文件"
-                       class="link-input"
-                       style="width: 100%"
-                   >
+                       placeholder="未上传动画文件"
+                       class="link-input">
                    </el-input>
+                 </div>
                </div>
-             </div>
-           </el-form-item>
+             </el-form-item>
+             <!-- 音频文件 -->
+             <el-form-item label="音频文件" prop="audioUrl">
+               <el-upload
+                   v-model:file-list="form.audioFiles"
+                   action="/dev-api/template/upload"
+                   :on-success="(res) => handleSuccess(res, 'audioUrl')"
+                   :before-upload="(file) => beforeUpload(file, ['mp3'], 500)"
+                   :accept="'.mp3'">
+                 <el-button type="primary">点击上传</el-button>
+                 <div class="el-upload__tip">支持.mp3格式，不超过500MB</div>
+               </el-upload>
+               <!-- 新增的文件链接展示区域 -->
+               <div class="file-links-container" >
+                 <!--               <div class="link-title">已上传文件：</div>-->
+                 <div class="link-list">
+                   <el-input
+                       v-model="form.audioUrl"
+                       readonly
+                       placeholder="未上传音频文件"
+                       class="link-input">
+                   </el-input>
+                 </div>
+               </div>
+             </el-form-item>
+           </template>
 
-           <!-- 视频文件文件 -->
-           <el-form-item label="动画文件" prop="imageUrl">
-             <el-upload
-                 v-model:file-list="form.videoFiles"
-                 action="/dev-api/template/upload"
-                 :on-success="(res) => handleSuccess(res, 'imageUrl')"
-                 :before-upload="(file) => beforeUpload(file, ['png', 'jpg','jpeg','mp4', 'mov','gif'], 500)"
-                 :accept="'.mp4,.mov,.png,.jpg,.csv,.jpeg,.gif'">
-               <el-button type="primary">点击上传</el-button>
-               <div class="el-upload__tip">支持.mp4/.mov/.png/.jpg/.jpeg/.gif格式</div>
-             </el-upload>
-             <!-- 新增的文件链接展示区域 -->
-             <div class="file-links-container" >
-               <!--               <div class="link-title">已上传文件：</div>-->
-               <div class="link-list">
-                 <el-input
-                     v-model="form.imageUrl"
-                     readonly
-                     placeholder="未上传动画文件"
-                     class="link-input">
-                 </el-input>
-               </div>
-             </div>
-           </el-form-item>
-           <!-- 音频文件 -->
-           <el-form-item label="音频文件" prop="audioUrl">
-             <el-upload
-                 v-model:file-list="form.audioFiles"
-                 action="/dev-api/template/upload"
-                 :on-success="(res) => handleSuccess(res, 'audioUrl')"
-                 :before-upload="(file) => beforeUpload(file, ['mp3'], 500)"
-                 :accept="'.mp3'">
-               <el-button type="primary">点击上传</el-button>
-               <div class="el-upload__tip">支持.mp3格式，不超过500MB</div>
-             </el-upload>
-             <!-- 新增的文件链接展示区域 -->
-             <div class="file-links-container" >
-               <!--               <div class="link-title">已上传文件：</div>-->
-               <div class="link-list">
-                 <el-input
-                     v-model="form.audioUrl"
-                     readonly
-                     placeholder="未上传音频文件"
-                     class="link-input">
-                 </el-input>
-               </div>
-             </div>
-           </el-form-item>
            <!-- 封面图片 -->
            <el-form-item label="社区封面" prop="coverUrl">
              <el-upload
@@ -409,6 +505,26 @@
             </div>
          </template>
       </el-dialog>
+     <el-dialog title="内容付费授权" v-model="openUserPermDialog" width="600px">
+       <el-form label-width="80px">
+         <el-form-item label="用户列表">
+           <el-checkbox-group v-model="selectedUserIds">
+             <div v-for="user in allUserOptions" :key="user.userId" style="margin-bottom: 10px;">
+               <el-checkbox :label="user.id">
+                 {{ user.username }}
+                 <el-tag v-if="user.isAssigned === 1" size="small" type="success">已购</el-tag>
+               </el-checkbox>
+             </div>
+           </el-checkbox-group>
+         </el-form-item>
+       </el-form>
+       <template #footer>
+         <div class="dialog-footer">
+           <el-button type="primary" @click="submitUserPermission">确 定</el-button>
+           <el-button @click="openUserPermDialog = false">取 消</el-button>
+         </div>
+       </template>
+     </el-dialog>
    </div>
 </template>
 
@@ -423,11 +539,19 @@ import {
   listRole,
   updateRole,
   getActiveCategoryList,
-  deptTreeSelect, changeFeaturedStatus, getTopicList, getActivityList, getUserList
+  deptTreeSelect,
+  changeFeaturedStatus,
+  getTopicList,
+  getActivityList,
+  getUserList,
+  changeStatus,
+  collectionList,
+  orgTreeSelect, savePostOrgPrivileges, saveUserPostPermissions, getAuthorizedUsers, listUsersWithState
   //getCategoryListByTypeId
 } from "@/api/system/postRecord";
 import { roleMenuTreeselect, treeselect as menuTreeselect } from "@/api/system/menu";
 import { ref, reactive, onMounted } from 'vue'
+import {OfficeBuilding} from "@element-plus/icons-vue";
 //import { getCategoryList } from '@/api/system/template'
 //import { getActiveCategoryTypeList } from '@/api/system/postRecord'
 
@@ -461,6 +585,9 @@ const categoryTypeOptions = ref([])
 const topicOptions = ref([])
 const activityOptions = ref([])
 const userOptions = ref([])
+const openOrgDialog = ref(false);
+const currentPostId = ref(null);
+const deptTreeRef = ref(null);
 
 // 生命周期：组件挂载时加载数据
 onMounted(async () => {
@@ -469,12 +596,34 @@ onMounted(async () => {
   await loadActivity()
   await loadUserList()
 })
+/**
+ * 新 分类树加载
+ * @returns {Promise<void>}
+ */
+const loadCategoryType = async () => {
+  try {
+    loading.value = true;
+    const res = await getActiveCategoryList();
+    // 假设后端返回的是带有 children 嵌套结构的树，或者是扁平数组需要手动转树
+    // 如果后端已经是树结构：
+    categoryTypeOptions.value = res.data;
+
+    /* 如果后端返回的是扁平数组，需要解开注释使用下方逻辑转树：
+    categoryTypeOptions.value = handleTree(res.data, "id");
+    */
+  } catch (error) {
+    console.error('加载分类数据失败:', error);
+    ElMessage.error('分类数据加载失败');
+  } finally {
+    loading.value = false;
+  }
+};
 
 /**
  * 加载大类类型数据方法
  * @returns {Promise<void>}
  */
-const loadCategoryType = async () => {
+const loadCategoryType_old = async () => {
   try {
     loading.value = true
     const res = await getActiveCategoryList() // 调用后端接口
@@ -569,6 +718,7 @@ const { proxy } = getCurrentInstance();
 const { sys_post_featured } = proxy.useDict("sys_post_featured");
 
 const roleList = ref([]);
+const parentPostOptions = ref([]);
 const open = ref(false);
 const loading = ref(true);
 const showSearch = ref(true);
@@ -584,12 +734,17 @@ const menuNodeAll = ref(false);
 const deptExpand = ref(true);
 const deptNodeAll = ref(false);
 const deptOptions = ref([]);
+const orgOptions = ref([]);
 const openDataScope = ref(false);
 const menuRef = ref(null);
 const deptRef = ref(null);
 
 const data = reactive({
-  form: {},
+  form: {
+    postType: 0,
+    categoryId: undefined,
+    parentPostId: undefined
+  },
   queryParams: {
     pageNum: 1,
     pageSize: 10,
@@ -597,17 +752,163 @@ const data = reactive({
     categoryId:null,
     categoryName: undefined,
     templateName: undefined,
-    status: undefined
+    status: 0
   },
   rules: {
     name: [{ required: true, message: "模板名称不能为空", trigger: "blur" }],
     type: [{ required: true, message: "请选择大类类型", trigger: "blur" }],
-    categoryId: [{ required: true, message: "请选择所属大类", trigger: "blur" }],
+    // categoryId: [{ required: true, message: "请选择所属大类", trigger: "blur" }],
+    categoryId: [{ required: true, message: "请选择所属分类", trigger: "change" }],
     officialWeight: [{ required: true, message: "模板顺序不能为空", trigger: "blur" }]
   },
 });
 
+// 社区大类调整需求
+const openUserPermDialog = ref(false);
+const allUserOptions = ref([]); // 存储带标记的所有用户
+const selectedUserIds = ref([]); // 存储 v-model 勾选的 ID 数组
+
+/** 授权按钮点击 */
+function handleUserPermission(row) {
+  debugger
+  currentPostId.value = row.id;
+  openUserPermDialog.value = true;
+
+  // 1. 调用后端接口：获取所有用户及该 postId 的授权标记
+  listUsersWithState(row.id).then(response => {
+    allUserOptions.value = response.data;
+
+    // 2. 核心：将后端标记为 isAssigned === 1 的 ID 放入勾选数组
+    selectedUserIds.value = response.rows
+        .filter(user => user.isAssigned === 1)
+        .map(user => user.username);
+  });
+}
+
+/** 提交逻辑 */
+function submitUserPermission() {
+  const data = {
+    postId: currentPostId.value,
+    userIds: selectedUserIds.value // 提交当前所有选中的 ID
+  };
+  saveUserPostPermissions(data).then(res => {
+    proxy.$modal.msgSuccess("保存成功");
+    openUserPermDialog.value = false;
+  });
+}
+
 const { queryParams, form, rules } = toRefs(data);
+
+/** 处理权限下发按钮点击 */
+function handleOrgPrivilege(row) {
+  currentPostId.value = row.id;
+  openOrgDialog.value = true;
+
+  // 调用后端新增的接口：传当前内容 ID
+  orgTreeSelect(row.id).then(response => {
+    // 1. 加载全量机构列表
+    orgOptions.value = response.rows;
+
+    // 2. 提取已经赋权的 ID 数组
+    const checkedIds = response.rows
+        .filter(item => item.isAssigned === 1)
+        .map(item => item.id);
+
+    // 3. 在下一个 DOM 更新周期设置勾选状态
+    nextTick(() => {
+      if (deptTreeRef.value) {
+        deptTreeRef.value.setCheckedKeys(checkedIds);
+      }
+    });
+  });
+}
+
+/** 提交权限下发 */
+/** 提交组织权限关联 */
+function submitOrgPrivilege() {
+  // 1. 获取 el-tree 中所有被勾选的节点 ID 数组
+  // 因为是单层，getCheckedKeys 获取的就是你看到的所有勾选 ID
+  const orgIds = deptTreeRef.value.getCheckedKeys();
+
+  // 2. 构造提交数据
+  // currentPostId 在打开弹窗时已记录（ handleOrgPrivilege 赋值）
+  const postData = {
+    postId: currentPostId.value,
+    orgIds: orgIds // 这是一个 Long 类型的数组 [1, 2, 3]
+  };
+
+  // 3. 提交前的二次确认（可选，防止误操作清空权限）
+  if (orgIds.length === 0) {
+    proxy.$modal.confirm('确定要取消该内容对所有机构的授权吗？').then(() => {
+      doSave(postData);
+    });
+  } else {
+    doSave(postData);
+  }
+}
+
+/** 实际调用 API 保存 */
+function doSave(data) {
+  proxy.$modal.loading("正在保存，请稍候...");
+  // savePostOrgPrivileges 是你 api/post.js 中定义的接口
+  savePostOrgPrivileges(data).then(response => {
+    proxy.$modal.closeLoading();
+    proxy.$modal.msgSuccess("授权成功");
+    openOrgDialog.value = false; // 关闭弹窗
+  }).catch(() => {
+    proxy.$modal.closeLoading();
+  });
+}
+
+/** 切换内容类型触发 */
+function handlePostTypeChange(val) {
+  // 1. 无论切到哪种类型，先安全初始化可能用到的数组
+  if (!parentPostOptions.value) {
+    parentPostOptions.value = [];
+  }
+
+  // 2. 清空父合辑 ID，防止跨类型污染
+  form.value.parentPostId = undefined;
+
+  // 3. 针对不同类型的逻辑
+  if (val === 2) {
+    // 子内容：如果已有分类，加载合辑列表
+    if (form.value.categoryId) {
+      loadParentPosts(form.value.categoryId);
+    }
+  } else if (val === 1) {
+    // 合辑主贴：确保相关资源字段即便隐藏也有初始值，避免校验报错
+    form.value.actionUrl = form.value.actionUrl || "";
+    form.value.mediaUrl = form.value.mediaUrl || "";
+    form.value.audioUrl = form.value.audioUrl || "";
+    form.value.audioFiles = form.value.audioFiles || "";
+    form.value.actionFiles = form.value.actionFiles || "";
+    form.value.videoFiles = form.value.videoFiles || "";
+  }
+}
+
+/** 分类改变触发 */
+function handleCategoryChange(val) {
+  // 如果当前模式是子内容，分类一变就要重查合辑列表
+  if (form.value.postType === 2 && val) {
+    loadParentPosts(val);
+  }
+}
+
+/** 加载合辑列表 */
+function loadParentPosts(categoryId) {
+  const params = {
+    categoryId: categoryId,
+    postType: 1,
+    status: 0
+  };
+  // 确保接口调用安全
+  collectionList(params).then(response => {
+    parentPostOptions.value = response.rows || [];
+  }).catch(err => {
+    console.error("加载合辑失败", err);
+  });
+}
 
 /** 查询角色列表 */
 function getList() {
@@ -615,6 +916,12 @@ function getList() {
   listRole(proxy.addDateRange(queryParams.value, dateRange.value)).then(response => {
     roleList.value = response.rows;
     total.value = response.total;
+
+    // 使用 nextTick 确保表格渲染完成后再释放拦截锁
+    nextTick(() => {
+      loading.value = false;
+    });
+  }).catch(() => {
     loading.value = false;
   });
 }
@@ -690,14 +997,34 @@ function handleSelectionChange(selection) {
 }
 
 /** 精选状态修改 */
-function handleStatusChange(row) {
+function handleFeaturedChange(row) {
+  // --- 新增：如果处于加载状态，说明是初始化赋值，直接返回 ---
+  if (loading.value) {
+    return;
+  }
   let text = row.isFeatured === 1 ? "精选" : "非精选";
   proxy.$modal.confirm('确认要将"' +row.id + '"设置为' +text +'吗？').then(function () {
     return changeFeaturedStatus(row.id, row.isFeatured);
   }).then(() => {
     proxy.$modal.msgSuccess(text + "成功");
   }).catch(function () {
-    row.isFeatured = row.isFeatured === "0" ? "1" : "0";
+    row.isFeatured = row.isFeatured === 0 ? 1 : 0;
+  });
+}
+
+/** 上下架 */
+function handleStatusChange(row) {
+  // --- 新增：如果处于加载状态，说明是初始化赋值，直接返回 ---
+  if (loading.value) {
+    return;
+  }
+  let text = row.status === 1 ? "下架" : "上架";
+  proxy.$modal.confirm('确认要将"' +row.id + '"设置为' +text +'吗？').then(function () {
+    return changeStatus(row.id, row.status);
+  }).then(() => {
+    proxy.$modal.msgSuccess(text + "成功");
+  }).catch(function () {
+    row.status = row.status === 0 ? 0 : 1;
   });
 }
 
@@ -748,11 +1075,17 @@ function reset() {
   deptNodeAll.value = false;
   form.value = {
     id: undefined,
+    categoryId: undefined, // 分类ID
+    postType: 0,           // 默认 0:普通 1:合辑主内容, 2:合辑子内容
+    parentPostId: undefined, // 所属合辑ID
     name: undefined,
     roleKey: undefined,
     officialWeight: 0,
     actionUrl:undefined,
-    status: "0",
+    status: 0,
+    visibility: 0,      // 0-公共
+    isFeatured: 0,      // 0-未精选
+    isPremium: 0,       // 0-免费
     actionFiles:[],
     videoFiles:[],
     audioFiles:[],
@@ -764,6 +1097,7 @@ function reset() {
     deptCheckStrictly: true,
     remark: undefined
   };
+  if (parentPostOptions.value) parentPostOptions.value = []; // 重置合辑选项
   proxy.resetForm("roleRef");
 }
 
@@ -779,7 +1113,7 @@ function handleUpdate(row) {
   reset();
   const id = row.id || ids.value;
   const actionUrl = row.actionUrl;
-  const imageUrl = row.imageUrl;
+  const mediaUrl = row.mediaUrl;
   const audioUrl = row.audioUrl;
   const coverUrl = row.coverUrl;
   const coverContent = row.coverContent;
@@ -787,7 +1121,7 @@ function handleUpdate(row) {
     debugger
     form.value = response.data;
     form.actionUrl = actionUrl;
-    form.imageUrl = imageUrl;
+    form.mediaUrl = mediaUrl;
     form.coverUrl = coverUrl;
     form.coverContent = coverContent;
     open.value = true;
@@ -821,6 +1155,15 @@ function getDeptTree(roleId) {
   });
 }
 
+/** 查询所有组织机构 */
+function getOrgTree(postId) {
+  // 这里的 orgTreeSelect 对应你的 API 接口名
+  return orgTreeSelect(postId).then(response => {
+    // 对应你返回 JSON 中的 rows 字段
+    orgOptions.value = response.rows;
+    return response;
+  });
+}
 /** 树权限（展开/折叠）*/
 function handleCheckedTreeExpand(value, type) {
   if (type == "menu") {

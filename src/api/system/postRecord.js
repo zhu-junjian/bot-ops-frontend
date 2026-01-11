@@ -10,6 +10,16 @@ export function listRole(query) {
   })
 }
 
+// 查询角色列表
+export function collectionList(query) {
+  return request({
+    //url: '/system/role/list',
+    url: '/post/collectionList',
+    method: 'get',
+    params: query
+  })
+}
+
 // 查询模板大类列表
 export function getCategoryList() {
   return request({
@@ -22,7 +32,7 @@ export function getCategoryList() {
 // 查询启用状态下的内容大类
 export function getActiveCategoryList() {
   return request({
-    url: '/flCategory/listMap',
+    url: '/categoryTree/categoryTreeMap',
     method: 'get',
     params: ''
   })
@@ -140,6 +150,19 @@ export function changeFeaturedStatus(id, isFeatured) {
   })
 }
 
+// 上下架
+export function changeStatus(id, status) {
+  const data = {
+    id,
+    status
+  }
+  return request({
+    url: '/post/status',
+    method: 'put',
+    data: data
+  })
+}
+
 // 删除角色
 export function delRole(id) {
   return request({
@@ -200,6 +223,46 @@ export function deptTreeSelect(roleId) {
     method: 'get'
   })
 }
+
+// 查询所有组织机构树
+export function orgTreeSelect(postId) {
+  return request({
+    url: '/org/allOrgListWithAssigned/'+postId,
+    method: 'get'
+  })
+}
+
+export function savePostOrgPrivileges(data) {
+  return request({
+    url: '/postOrgPrivilege/save',
+    method: 'post',
+    data: data
+  })
+}
+
+export function saveUserPostPermissions(data) {
+  return request({
+    url: '/userPostPer/save',
+    method: 'post',
+    data: data
+  })
+}
+
+export function listUsersWithState(postId) {
+  return request({
+    url: '/userPostPer/selectUsersWithPermissionState/'+postId,
+    method: 'get'
+  })
+}
+
+// 查询已赋权的用户
+export function getAuthorizedUsers(postId) {
+  return request({
+    url: '/userPostPer/authorizedUsers/'+postId,
+    method: 'get'
+  })
+}
+
 
 export function clearFileList(){
   this.fileList = [];
