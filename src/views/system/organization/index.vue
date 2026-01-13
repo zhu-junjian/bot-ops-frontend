@@ -1,10 +1,10 @@
-<!--<template>
+<template>
    <div class="app-container">
       <el-form :model="queryParams" ref="queryRef" v-show="showSearch" :inline="true" label-width="68px">
          <el-form-item label="大类名称" prop="name">
             <el-input
                v-model="queryParams.name"
-               placeholder="请输大类名称"
+               placeholder="请输入大类名称"
                clearable
                style="width: 240px"
                @keyup.enter="handleQuery"
@@ -25,58 +25,37 @@
 
             >新增</el-button>
          </el-col>
+
          <el-col :span="1.5">
-            <el-button
-               type="danger"
+            <el-button type="danger"
                plain
                icon="Delete"
                :disabled="multiple"
                @click="handleDelete"
-
             >删除</el-button>
          </el-col>
-&lt;!&ndash;         <el-col :span="1.5">
-            <el-button
-               type="warning"
-               plain
-               icon="Download"
-               @click="handleExport"
-               v-hasPermi="['system:role:export']"
-            >导出</el-button>
-         </el-col>&ndash;&gt;
          <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
       </el-row>
 
-      &lt;!&ndash; 表格数据 &ndash;&gt;
+      <!-- 表格数据 -->
      <el-table v-loading="loading" :data="roleList" @selection-change="handleSelectionChange">
        <el-table-column type="selection" width="55" align="center" />
-       <el-table-column label="编号" align="center" prop="id" width="60" />
-       <el-table-column label="名称" align="center" prop="name"  width="240"/>
-       <el-table-column label="排序" align="center" prop="officialWeight"  width="120" />
-       <el-table-column label="启用" align="center" width="100" prop="status">
+<!--       <el-table-column label="模板编号" prop="id" width="80" />-->
+       <el-table-column label="编号" align="center" prop="id"  width="120"/>
+       <el-table-column label="机构名称" align="center" prop="orgName"  width="200"/>
+       <el-table-column label="创建时间" align="center" prop="createTime"  >
          <template #default="scope">
-           <el-switch
-               v-model="scope.row.status"
-               :active-value="0"
-               :inactive-value="1"
-               @change="handleStatusChange(scope.row)"
-           ></el-switch>
+           <span>{{ parseTime(scope.row.createTime) }}</span>
          </template>
        </el-table-column>
        <el-table-column label="操作" align="center" class-name="small-padding fixed-width" >
          <template #default="scope">
-&lt;!&ndash;           <el-tooltip content="修改" placement="top" v-if="scope.row.roleId !== 1">
-             <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" ></el-button>
-           </el-tooltip>&ndash;&gt;
-&lt;!&ndash;           <el-tooltip content="删除" placement="top" v-if="scope.row.roleId !== 1">
-             <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)"></el-button>
-           </el-tooltip>&ndash;&gt;
-&lt;!&ndash;           <el-tooltip content="数据权限" placement="top" v-if="scope.row.roleId !== 1">
-             <el-button link type="primary" icon="CircleCheck" @click="handleDataScope(scope.row)" v-hasPermi="['system:role:edit']"></el-button>
+           <el-tooltip content="修改" placement="top" >
+             <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)"></el-button>
            </el-tooltip>
-           <el-tooltip content="分配用户" placement="top" v-if="scope.row.roleId !== 1">
-             <el-button link type="primary" icon="User" @click="handleAuthUser(scope.row)" v-hasPermi="['system:role:edit']"></el-button>
-           </el-tooltip>&ndash;&gt;
+           <el-tooltip content="删除" placement="top" >
+             <el-button link type="primary" icon="Delete" @click="handleDelete(scope.row)" ></el-button>
+           </el-tooltip>
          </template>
        </el-table-column>
      </el-table>
@@ -89,15 +68,12 @@
          @pagination="getList"
       />
 
-      &lt;!&ndash; 添加或修改角色配置对话框 &ndash;&gt;
+      <!-- 添加或修改角色配置对话框 -->
       <el-dialog :title="title" v-model="open" width="500px" append-to-body>
          <el-form ref="roleRef" :model="form" :rules="rules" label-width="100px">
-           <el-form-item label="名称" prop="name">
-             <el-input v-model="form.name" placeholder="请输入名称" />
-           </el-form-item>
-           <el-form-item label="官方排序" prop="officialWeight">
-              <el-input-number v-model="form.officialWeight" controls-position="right" :min="0" />
-           </el-form-item>
+            <el-form-item label="机构名称" prop="orgName"> <!-- 此处的name负责校验提示-->
+               <el-input v-model="form.orgName" placeholder="请输入大类名称" />
+            </el-form-item>
          </el-form>
          <template #footer>
             <div class="dialog-footer">
@@ -107,7 +83,7 @@
          </template>
       </el-dialog>
 
-      &lt;!&ndash; 分配角色数据权限对话框 &ndash;&gt;
+      <!-- 分配角色数据权限对话框 -->
       <el-dialog :title="title" v-model="openDataScope" width="500px" append-to-body>
          <el-form :model="form" label-width="80px">
             <el-form-item label="角色名称">
@@ -151,94 +127,27 @@
          </template>
       </el-dialog>
    </div>
-</template>-->
-
-<template>
-  <div class="app-container">
-    <el-row :gutter="10" class="mb8">
-      <el-col :span="1.5">
-        <el-button type="primary" plain icon="Plus" @click="handleAdd">新增顶级分类</el-button>
-      </el-col>
-    </el-row>
-
-    <el-table
-        :data="categoryList"
-        row-key="id"
-        :tree-props="{ children: 'children' }"
-    >
-      <el-table-column prop="name" label="分类名称" width="280">
-        <template #default="scope">
-          <span>{{ scope.row.name }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column prop="coverUrl" label="封面" width="100">
-        <template #default="scope">
-          <el-image v-if="scope.row.coverUrl" :src="scope.row.coverUrl" style="width:40px;height:40px" fit="cover" />
-        </template>
-      </el-table-column>
-      <el-table-column prop="level" label="层级" align="center" width="100">
-        <template #default="scope">
-          <el-tag size="small">{{ scope.row.level }}级</el-tag>
-        </template>
-      </el-table-column>
-      <el-table-column prop="path" label="节点路径" align="center" />
-
-      <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
-        <template #default="scope">
-          <el-button link type="primary" icon="Plus" @click="handleAdd(scope.row)">新增子类</el-button>
-          <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)">修改</el-button>
-          <el-button link type="danger" icon="Delete" @click="handleDelete(scope.row)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-
-    <el-dialog :title="title" v-model="open" width="600px" append-to-body>
-      <el-form ref="categoryRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="上级分类" prop="parentId">
-          <el-tree-select
-              v-model="form.parentId"
-              :data="categoryOptions"
-              :props="{ value: 'id', label: 'name', children: 'children' }"
-              value-key="id"
-              placeholder="选择所属分类 (不选则为一级分类)"
-              check-strictly
-              style="width: 100%"
-          />
-        </el-form-item>
-        <el-form-item label="分类名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入分类名称" />
-        </el-form-item>
-        <el-form-item label="封面图" prop="coverUrl">
-          <el-input v-model="form.coverUrl" placeholder="请输入或上传封面地址" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div class="dialog-footer">
-          <el-button type="primary" @click="submitForm">确 定</el-button>
-          <el-button @click="cancel">取 消</el-button>
-        </div>
-      </template>
-    </el-dialog>
-  </div>
 </template>
 
 <script setup name="Role">
 import {
   addRole,
-  changeRoleStatus,
   dataScope,
   delRole,
-  addPost,
   getRole,
   listRole,
   updateRole,
-  deptTreeSelect, changeFeaturedStatus, listCategory, delCategory, updateCategory, addCategory, getCategory
-  //getCategoryListByTypeId
-} from "@/api/system/flCategory";
+  deptTreeSelect,
+  changeStatus
+} from "@/api/system/organization";
 import { roleMenuTreeselect, treeselect as menuTreeselect } from "@/api/system/menu";
+
+const router = useRouter();
+const { proxy } = getCurrentInstance();
+const { sys_normal_disable } = proxy.useDict("sys_normal_disable");
+
 import { ref, reactive, onMounted } from 'vue'
-//import { getCategoryList } from '@/api/system/template'
-//import { getCategoryTypeList } from '@/api/system/category'
+import { getCategoryTypeList } from '@/api/system/category' // 假设这是你的API接口
 
 // 下拉选项数据
 const categoryOptions = ref([])
@@ -248,59 +157,14 @@ onMounted(async () => {
   await loadCategoryType()
 })
 
-// 当一级选择变化时
-const handleTypeChange = async (typeId) => {
-  console.log("why")
-  // 1. 立即清空二级分类的值和选项
-  form.value.categoryId = null;     // 清空选中值
-    // 清空旧选项（注意使用.value）
-  if (!typeId) {
-    return
-  }
-  try {
-    const res = await getCategoryListByTypeId(typeId) // 根据大类类型Id获取其下大类
-    categoryOptions.value = res.data.map(item => ({
-      id: item.id,
-      name: item.name // 根据实际接口字段调整
-    }))
-  } finally {
-    // 出错时也保持清空
-  }
-}
-
-// 下拉选项数据
-const categoryTypeOptions = ref([])
-
-// 生命周期：组件挂载时加载数据
-onMounted(async () => {
-  await loadCategoryType()
-})
-
-// 加载大类类型数据方法
+// 加载分类数据方法
 const loadCategoryType = async () => {
   try {
     loading.value = true
     const res = await getCategoryTypeList() // 调用后端接口
-    categoryTypeOptions.value = res.data.map(item => ({
+    categoryOptions.value = res.data.map(item => ({
       id: item.typeId,
       name: item.typeName // 根据实际接口字段调整
-    }))
-  } catch (error) {
-    console.error('加载分类数据失败:', error)
-    ElMessage.error('分类数据加载失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-// 加载大类名数据方法
-const loadCategories = async () => {
-  try {
-    loading.value = true
-    const res = await getCategoryList() // 调用后端接口
-    categoryOptions.value = res.data.map(item => ({
-      id: item.id,
-      name: item.name // 根据实际接口字段调整
     }))
   } catch (error) {
     console.error('加载分类数据失败:', error)
@@ -329,10 +193,6 @@ const props = defineProps({
     })
   }
 }, { immediate: true })*/
-
-const router = useRouter();
-const { proxy } = getCurrentInstance();
-const { sys_post_featured } = proxy.useDict("sys_post_featured");
 
 const roleList = ref([]);
 const open = ref(false);
@@ -368,111 +228,47 @@ const data = reactive({
   queryParams: {
     pageNum: 1,
     pageSize: 10,
-    type:null,
-    categoryId:null,
-    categoryName: undefined,
-    templateName: undefined,
-    status: undefined
+    orgName: undefined
+    /*status: undefined*/
   },
   rules: {
-    name: [{ required: true, message: "名称不能为空", trigger: "blur" }],
-    type: [{ required: true, message: "请选择大类类型", trigger: "blur" }],
-    categoryId: [{ required: true, message: "请选择所属大类", trigger: "blur" }],
-    officialWeight: [{ required: true, message: "模板顺序不能为空", trigger: "blur" }]
+    orgName: [{ required: true, message: "机构名称不能为空", trigger: "blur" }]
   },
 });
-
-
-// 社区大类调整需求
-const categoryList = ref([]);      // 表格展示用的树
-
-/** 查询分类列表 */
-async function getList() {
-  loading.value = true;
-  try {
-    const response = await listCategory();
-    // 后端如果直接返回了嵌套结构:
-    categoryList.value = response.data;
-
-    // 如果下拉框需要一个“顶级类目”虚拟节点，可以手动构建
-    const menu = { id: 0, name: '主类目', children: response.data };
-    categoryOptions.value = [menu];
-  } finally {
-    loading.value = false;
-  }
-}
-
-/** * 如果后端返回的是扁平数组（没有 children），
- * 前端需要用 handleTree 函数转换（Ruoyi 框架自带此工具）
- */
-/*
-function getList() {
-  listCategory().then(res => {
-    categoryList.value = proxy.handleTree(res.data, "id", "parentId");
-  });
-}
-*/
-
-onMounted(() => {
-  getList();
-});
-// 新增操作
-
-function handleAdd(row) {
-  reset();
-  // 如果是从行点击“新增子类”，则自动填入该行的 ID 作为父级
-  if (row != null && row.id) {
-    form.value.parentId = row.id;
-  } else {
-    form.value.parentId = 0; // 顶级分类
-  }
-  open.value = true;
-  title.value = "添加分类";
-  // 获取下拉框数据
-  getCategoryTree().then(res => {
-    categoryOptions.value = res.data;
-  });
-}
-
-// 提交表单
-function submitForm() {
-  proxy.$refs["categoryRef"].validate(valid => {
-    if (valid) {
-      if (form.value.id != undefined) {
-        updateCategory(form.value).then(res => {
-          proxy.$modal.msgSuccess("修改成功");
-          open.value = false;
-          getList();
-        });
-      } else {
-        addCategory(form.value).then(res => {
-          proxy.$modal.msgSuccess("新增成功");
-          open.value = false;
-          getList();
-        });
-      }
-    }
-  });
-}
-
 
 const { queryParams, form, rules } = toRefs(data);
 
 /** 查询角色列表 */
-/*function getList() {
+function getList() {
   loading.value = true;
   listRole(proxy.addDateRange(queryParams.value, dateRange.value)).then(response => {
     roleList.value = response.rows;
     total.value = response.total;
     loading.value = false;
   });
-}*/
+}
+
+/** 精选状态修改 */
+function handleFeaturedChange(row) {
+  // --- 新增：如果处于加载状态，说明是初始化赋值，直接返回 ---
+  if (loading.value) {
+    return;
+  }
+  let text = row.isFeatured === 1 ? "精选" : "非精选";
+  proxy.$modal.confirm('确认要将"' +row.id + '"设置为' +text +'吗？').then(function () {
+    return changeFeaturedStatus(row.id, row.isFeatured);
+  }).then(() => {
+    proxy.$modal.msgSuccess(text + "成功");
+  }).catch(function () {
+    row.isFeatured = row.isFeatured === 0 ? 1 : 0;
+  });
+}
 
 /** 搜索按钮操作 */
-/*function handleQuery() {
+function handleQuery() {
   queryParams.value.pageNum = 1;
   getList();
-}*/
+}
 
 /** 重置按钮操作 */
 function resetQuery() {
@@ -484,38 +280,12 @@ function resetQuery() {
 /** 删除按钮操作 */
 function handleDelete(row) {
   const id = row.id || ids.value;
-  proxy.$modal.confirm('是否确认删除分类编号为"' + id + '"的数据项?').then(function () {
-    return delCategory(id);
+  proxy.$modal.confirm('是否确认删除角色编号为"' + id + '"的数据项?').then(function () {
+    return delRole(id);
   }).then(() => {
     getList();
     proxy.$modal.msgSuccess("删除成功");
   }).catch(() => {});
-}
-
-// 统一上传成功处理
-function handleSuccess(res, field) {
-  if (res.code === 200) {
-    this.form[field] = res.msg
-    /*console.log("this.message:"+this.form["fileList"]);*/
-    //this.$message.success(`${field}上传成功`)
-  }
-}
-
-// 统一上传前校验
-function beforeUpload(file, allowedTypes, maxSizeMB) {
-  const fileType = file.name.split('.').pop().toLowerCase()
-  const isValidType = allowedTypes.includes(fileType)
-  const isValidSize = file.size / 1024 / 1024 < maxSizeMB
-
-  if (!isValidType) {
-    this.$message.error(`仅支持 ${allowedTypes.join('/')} 格式`)
-    return false
-  }
-  if (!isValidSize) {
-    this.$message.error(`文件大小不能超过${maxSizeMB}MB`)
-    return false
-  }
-  return true
 }
 
 /** 导出按钮操作 */
@@ -525,12 +295,6 @@ function handleExport() {
   }, `role_${new Date().getTime()}.xlsx`);
 }
 
-/*function handleRemove(file, fileList) {
-  // 当文件被移除时，更新fileList，这里可以不手动操作，因为Element UI会自动更新
-  // 但如果你想手动控制，可以再次调用 clearFileList()
-  this.clearFileList();
-}*/
-
 /** 多选框选中数据 */
 function handleSelectionChange(selection) {
   ids.value = selection.map(item => item.id);
@@ -538,15 +302,17 @@ function handleSelectionChange(selection) {
   multiple.value = !selection.length;
 }
 
-/** status状态修改 */
+/** 角色状态修改 */
 function handleStatusChange(row) {
-  let text = row.status === 1 ? "禁用" : "启用";
-  proxy.$modal.confirm('确认要"' + text + '""' + row.name + '"大类吗?').then(function () {
-    return changeFeaturedStatus(row.id, row.status);
+  debugger
+  let text = row.status === "1" ? "启用" : "停用";
+  proxy.$modal.confirm('确认要"' + text + '""' + row.orgName + '"机构吗?').then(function () {
+    return changeStatus(row.id, row.status);
   }).then(() => {
     proxy.$modal.msgSuccess(text + "成功");
   }).catch(function () {
-    row.status = row.status === 1 ? 0 : 1;
+    debugger
+    row.status = row.status === "0" ? "1" : "0";
   });
 }
 
@@ -596,17 +362,12 @@ function reset() {
   deptExpand.value = true;
   deptNodeAll.value = false;
   form.value = {
-    id: undefined,
-    name: undefined,
+    roleId: undefined,
+    roleName: undefined,
     roleKey: undefined,
+    roleSort: 0,
     officialWeight: 0,
-    actionUrl:undefined,
     status: "0",
-    actionFiles:[],
-    videoFiles:[],
-    audioFiles:[],
-    coverUrlFiles:[],
-    coverContentFiles:[],
     menuIds: [],
     deptIds: [],
     menuCheckStrictly: true,
@@ -616,19 +377,21 @@ function reset() {
   proxy.resetForm("roleRef");
 }
 
-/** 添加模板 */
-/*function handleAdd() {
+/** 添加角色 */
+function handleAdd() {
   reset();
   open.value = true;
-  title.value = "发布内容";
-}*/
+  title.value = "添加大类";
+}
 
-/** 修改模板 */
+/** 修改角色 */
 function handleUpdate(row) {
   reset();
   const id = row.id || ids.value;
+  //const roleMenu = getRoleMenuTreeselect(id);
   getRole(id).then(response => {
     form.value = response.data;
+    form.value.roleSort = Number(form.value.roleSort);
     open.value = true;
     nextTick(() => {
       roleMenu.then((res) => {
@@ -641,7 +404,7 @@ function handleUpdate(row) {
       });
     });
   });
-  title.value = "修改角色";
+  title.value = "修改大类";
 }
 
 /** 根据角色ID查询菜单树结构 */
@@ -704,7 +467,7 @@ function getMenuAllCheckedKeys() {
 }
 
 /** 提交按钮 */
-/*function submitForm() {
+function submitForm() {
   proxy.$refs["roleRef"].validate(valid => {
     if (valid) {
       if (form.value.id != undefined) {
@@ -714,7 +477,7 @@ function getMenuAllCheckedKeys() {
           getList();
         });
       } else {
-        addPost(form.value).then(response => {
+        addRole(form.value).then(response => {
           proxy.$modal.msgSuccess("新增成功");
           open.value = false;
           getList();
@@ -722,7 +485,7 @@ function getMenuAllCheckedKeys() {
       }
     }
   });
-}*/
+}
 
 /** 取消按钮 */
 function cancel() {
@@ -758,7 +521,7 @@ function handleDataScope(row) {
 }
 
 /** 提交按钮（数据权限） */
-/*function submitDataScope() {
+function submitDataScope() {
   if (form.value.roleId != undefined) {
     form.value.deptIds = getDeptAllCheckedKeys();
     dataScope(form.value).then(response => {
@@ -767,7 +530,7 @@ function handleDataScope(row) {
       getList();
     });
   }
-}*/
+}
 
 /** 取消按钮（数据权限）*/
 function cancelDataScope() {
@@ -776,6 +539,4 @@ function cancelDataScope() {
 }
 
 getList();
-
-
 </script>

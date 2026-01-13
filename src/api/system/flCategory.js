@@ -47,7 +47,7 @@ export function updateCategory(data) {
 // 删除分类
 export function delCategory(id) {
   return request({
-    url: '/categoryTree/category/' + id,
+    url: '/categoryTree/' + id,
     method: 'delete'
   })
 }
