@@ -21,10 +21,10 @@
         </el-form-item>
 
         <!-- 分类搜索 -->
-        <el-form-item label="分类搜索" prop="firstLevelCategoryId" label-width="100px">
+        <el-form-item label="分类搜索" prop="categoryId" label-width="100px">
           <el-cascader
               style="width: 240px;"
-              v-model="queryParams.firstLevelCategoryId"
+              v-model="queryParams.categoryId"
               :options="categoryTypeOptions"
               :props="{ value: 'id', label: 'name', children: 'children', checkStrictly: true, emitPath: false }"
               filterable
@@ -42,6 +42,21 @@
           >
             <el-option
                 v-for="dict in sys_post_featured"
+                :key="dict.value"
+                :label="dict.label"
+                :value="dict.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="上下架" prop="status">
+          <el-select
+              v-model="queryParams.status"
+              placeholder="状态"
+              clearable
+              style="width: 240px"
+          >
+            <el-option
+                v-for="dict in sys_post_status"
                 :key="dict.value"
                 :label="dict.label"
                 :value="dict.value"
@@ -716,6 +731,7 @@ const props = defineProps({
 const router = useRouter();
 const { proxy } = getCurrentInstance();
 const { sys_post_featured } = proxy.useDict("sys_post_featured");
+const {sys_post_status} = proxy.useDict("sys_post_status");
 
 const roleList = ref([]);
 const parentPostOptions = ref([]);
@@ -752,7 +768,7 @@ const data = reactive({
     categoryId:null,
     categoryName: undefined,
     templateName: undefined,
-    status: 0
+    status: undefined
   },
   rules: {
     name: [{ required: true, message: "模板名称不能为空", trigger: "blur" }],
@@ -770,7 +786,6 @@ const selectedUserIds = ref([]); // 存储 v-model 勾选的 ID 数组
 
 /** 授权按钮点击 */
 function handleUserPermission(row) {
-  debugger
   currentPostId.value = row.id;
   openUserPermDialog.value = true;
 
@@ -1118,7 +1133,6 @@ function handleUpdate(row) {
   const coverUrl = row.coverUrl;
   const coverContent = row.coverContent;
   getRole(id).then(response => {
-    debugger
     form.value = response.data;
     form.actionUrl = actionUrl;
     form.mediaUrl = mediaUrl;

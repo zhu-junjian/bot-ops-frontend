@@ -602,7 +602,6 @@ function handleUpdate(row) {
   const coverUrl = row.coverUrl;
   const coverContent = row.coverContent;
   getRole(id).then(response => {
-    debugger
     form.value = response.data;
     form.actionUrl = actionUrl;
     form.imageUrl = imageUrl;

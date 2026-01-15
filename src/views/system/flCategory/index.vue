@@ -171,25 +171,51 @@
           <span>{{ scope.row.name }}</span>
         </template>
       </el-table-column>
-      <el-table-column prop="coverUrl" label="封面" width="100">
-        <template #default="scope">
-          <el-image v-if="scope.row.coverUrl" :src="scope.row.coverUrl" style="width:40px;height:40px" fit="cover" />
-        </template>
-      </el-table-column>
+
       <el-table-column prop="level" label="层级" align="center" width="100">
         <template #default="scope">
           <el-tag size="small">{{ scope.row.level }}级</el-tag>
         </template>
       </el-table-column>
+
+      <el-table-column prop="id" label="编号" align="center" />
+
+      <el-table-column prop="sortOrder" label="同级顺序" align="center" />
+
       <el-table-column prop="path" label="节点路径" align="center" />
+
+      <el-form-item label="封面" prop="coverUrl">
+        <el-upload
+            v-model:file-list="form.coverUrlFiles"
+            action="/dev-api/template/upload"
+            :on-success="(res) => handleSuccess(res, 'coverUrl')"
+            :before-upload="(file) => beforeUpload(file, ['png', 'jpg','jpeg', 'jpeg'], 500)"
+            :accept="'.jpg,.png,.jpeg'">
+          <el-button type="primary">点击上传</el-button>
+          <div class="el-upload__tip">支持.jpg/.png/.jpeg格式，不超过500MB</div>
+        </el-upload>
+        <!-- 新增的文件链接展示区域 -->
+        <div class="file-links-container" >
+          <!--               <div class="link-title">已上传文件：</div>-->
+          <div class="link-list">
+            <el-input
+                v-model="form.coverUrl"
+                readonly
+                placeholder="未上传社区封面"
+                class="link-input">
+            </el-input>
+          </div>
+        </div>
+      </el-form-item>
 
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template #default="scope">
-          <el-button link type="primary" icon="Plus" @click="handleAdd(scope.row)">新增子类</el-button>
-          <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)">修改</el-button>
-          <el-button link type="danger" icon="Delete" @click="handleDelete(scope.row)">删除</el-button>
+          <el-button link type="primary" icon="Plus" @click="handleAdd(scope.row)"></el-button>
+          <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)"></el-button>
+          <el-button link type="danger" icon="Delete" @click="handleDelete(scope.row)"></el-button>
         </template>
       </el-table-column>
+
     </el-table>
 
     <el-dialog :title="title" v-model="open" width="600px" append-to-body>
@@ -208,6 +234,17 @@
         <el-form-item label="分类名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入分类名称" />
         </el-form-item>
+        <el-form-item label="官方排序" prop="sortOrder">
+          <el-input-number v-model="form.sortOrder" controls-position="right" :min="0" />
+        </el-form-item>
+        <el-col :span="12">
+          <el-form-item label="发布状态">
+            <el-radio-group v-model="form.status">
+              <el-radio :label="0">上架</el-radio>
+              <el-radio :label="1">下架</el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </el-col>
         <el-form-item label="封面图" prop="coverUrl">
           <el-input v-model="form.coverUrl" placeholder="请输入或上传封面地址" />
         </el-form-item>
@@ -232,7 +269,14 @@ import {
   getRole,
   listRole,
   updateRole,
-  deptTreeSelect, changeFeaturedStatus, listCategory, delCategory, updateCategory, addCategory, getCategory
+  deptTreeSelect,
+  changeFeaturedStatus,
+  listCategory,
+  delCategory,
+  updateCategory,
+  addCategory,
+  getCategory,
+  getCategoryTree
   //getCategoryListByTypeId
 } from "@/api/system/flCategory";
 import { roleMenuTreeselect, treeselect as menuTreeselect } from "@/api/system/menu";
@@ -378,7 +422,7 @@ const data = reactive({
     name: [{ required: true, message: "名称不能为空", trigger: "blur" }],
     type: [{ required: true, message: "请选择大类类型", trigger: "blur" }],
     categoryId: [{ required: true, message: "请选择所属大类", trigger: "blur" }],
-    officialWeight: [{ required: true, message: "模板顺序不能为空", trigger: "blur" }]
+    sortOrder: [{ required: true, message: "排序不能为空", trigger: "blur" }]
   },
 });
 
@@ -600,6 +644,7 @@ function reset() {
     name: undefined,
     roleKey: undefined,
     officialWeight: 0,
+    sortOrder: 999,
     actionUrl:undefined,
     status: "0",
     actionFiles:[],
@@ -629,6 +674,7 @@ function handleUpdate(row) {
   const id = row.id || ids.value;
   getRole(id).then(response => {
     form.value = response.data;
+    form.value.parentId = row.parentId;
     open.value = true;
     nextTick(() => {
       roleMenu.then((res) => {
@@ -641,7 +687,7 @@ function handleUpdate(row) {
       });
     });
   });
-  title.value = "修改角色";
+  title.value = "修改分类";
 }
 
 /** 根据角色ID查询菜单树结构 */

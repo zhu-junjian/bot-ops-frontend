@@ -1,10 +1,10 @@
 <template>
   <div class="app-container">
     <el-form :model="queryParams" ref="queryRef" v-show="showSearch" :inline="true" label-width="68px">
-      <el-form-item label="大类名称" prop="name">
+      <el-form-item label="用户名称" prop="username">
         <el-input
-            v-model="queryParams.name"
-            placeholder="请输入大类名称"
+            v-model="queryParams.username"
+            placeholder="请输入用户名称"
             clearable
             style="width: 240px"
             @keyup.enter="handleQuery"
@@ -108,6 +108,21 @@
       <el-form ref="roleRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="用户名" prop="username"> <!-- 此处的name负责校验提示-->
           <el-input v-model="form.username" placeholder="请输入用户名" />
+        </el-form-item>
+      </el-form>
+      <el-form ref="roleRef" :model="form" :rules="rules" label-width="100px">
+        <el-form-item label="密码" prop="password"> <!-- 此处的name负责校验提示-->
+          <el-input v-model="form.password" placeholder="请输入密码" />
+        </el-form-item>
+      </el-form>
+      <el-form ref="roleRef" :model="form" :rules="rules" label-width="100px">
+        <el-form-item label="昵称" prop="nickName"> <!-- 此处的name负责校验提示-->
+          <el-input v-model="form.nickName" placeholder="请输入昵称" />
+        </el-form-item>
+      </el-form>
+      <el-form ref="roleRef" :model="form" :rules="rules" label-width="100px">
+        <el-form-item label="简介" prop="bio"> <!-- 此处的name负责校验提示-->
+          <el-input v-model="form.bio" placeholder="请输入用户简介" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -235,7 +250,8 @@ const data = reactive({
     /*status: undefined*/
   },
   rules: {
-    username: [{ required: true, message: "用户名称不能为空", trigger: "blur" }]
+    username: [{ required: true, message: "用户名称不能为空", trigger: "blur" }],
+    password: [{ required: true, message: "密码不能为空", trigger: "blur" }]
   },
 });
 
@@ -441,7 +457,7 @@ function reset() {
 function handleAdd() {
   reset();
   open.value = true;
-  title.value = "添加大类";
+  title.value = "添加用户";
 }
 
 /** 修改角色 */

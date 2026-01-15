@@ -38,7 +38,7 @@ export function addCategory(data) {
 // 修改分类
 export function updateCategory(data) {
   return request({
-    url: '/categoryTree/category',
+    url: '/categoryTree',
     method: 'put',
     data: data
   })
@@ -87,7 +87,7 @@ export function getCategoryListByTypeId(typeId) {
 // 查询角色详细
 export function getRole(roleId) {
   return request({
-    url: '/flCategory/' + roleId,
+    url: '/categoryTree/' + roleId,
     method: 'get'
   })
 }

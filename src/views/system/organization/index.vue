@@ -1,10 +1,10 @@
 <template>
    <div class="app-container">
       <el-form :model="queryParams" ref="queryRef" v-show="showSearch" :inline="true" label-width="68px">
-         <el-form-item label="大类名称" prop="name">
+         <el-form-item label="机构名称" prop="orgName">
             <el-input
-               v-model="queryParams.name"
-               placeholder="请输入大类名称"
+               v-model="queryParams.orgName"
+               placeholder="请输入机构名称"
                clearable
                style="width: 240px"
                @keyup.enter="handleQuery"
@@ -75,6 +75,14 @@
                <el-input v-model="form.orgName" placeholder="请输入大类名称" />
             </el-form-item>
          </el-form>
+        <el-col :span="12">
+          <el-form-item label="发布状态">
+            <el-radio-group v-model="form.status">
+              <el-radio :label="0">上架</el-radio>
+              <el-radio :label="1">下架</el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </el-col>
          <template #footer>
             <div class="dialog-footer">
                <el-button type="primary" @click="submitForm">确 定</el-button>
@@ -304,14 +312,12 @@ function handleSelectionChange(selection) {
 
 /** 角色状态修改 */
 function handleStatusChange(row) {
-  debugger
   let text = row.status === "1" ? "启用" : "停用";
   proxy.$modal.confirm('确认要"' + text + '""' + row.orgName + '"机构吗?').then(function () {
     return changeStatus(row.id, row.status);
   }).then(() => {
     proxy.$modal.msgSuccess(text + "成功");
   }).catch(function () {
-    debugger
     row.status = row.status === "0" ? "1" : "0";
   });
 }

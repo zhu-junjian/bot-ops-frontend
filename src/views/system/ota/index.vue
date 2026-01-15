@@ -379,7 +379,6 @@ function handleDelete(row) {
 // 统一上传成功处理
 function handleSuccess(res, field,filed1,field2) {
   if (res.code === 200) {
-    debugger
     this.form[field] = res.data.url;
     this.form[filed1] = res.data.hash;
     this.form[field2] = res.data.size;
@@ -520,7 +519,6 @@ function handleUpdate(row) {
   const coverUrl = row.coverUrl;
   const coverContent = row.coverContent;
   getRole(id).then(response => {
-    debugger
     form.value = response.data;
     form.actionUrl = actionUrl;
     form.imageUrl = imageUrl;
