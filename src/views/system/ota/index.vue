@@ -102,7 +102,7 @@
            <el-form-item label="升级包" prop="packUrl">
              <el-upload
                  v-model:file-list="form.audioFiles"
-                 action="/dev-api/template/upload"
+                 :action="uploadUrl"
                  :on-success="(res) => handleSuccess(res, 'packUrl', 'packHash','packSize')"
                  :before-upload="(file) => beforeUpload(file, ['mp3'], 500)"
                  :accept="'.mp3'">
@@ -161,6 +161,8 @@ import {
 } from "@/api/system/ota";
 import { roleMenuTreeselect, treeselect as menuTreeselect } from "@/api/system/menu";
 import { ref, reactive, onMounted } from 'vue'
+
+const uploadUrl = import.meta.env.VITE_APP_BASE_API + '/template/upload';
 //import { getCategoryList } from '@/api/system/template'
 //import { getActiveCategoryTypeList } from '@/api/system/postRecord'
 
@@ -379,11 +381,12 @@ function handleDelete(row) {
 // 统一上传成功处理
 function handleSuccess(res, field,filed1,field2) {
   if (res.code === 200) {
-    this.form[field] = res.data.url;
-    this.form[filed1] = res.data.hash;
-    this.form[field2] = res.data.size;
-    /*console.log("this.message:"+this.form["fileList"]);*/
-    //this.$message.success(`${field}上传成功`)
+    form.value[field] = res.data.url;
+    form.value[filed1] = res.data.hash;
+    form.value[field2] = res.data.size;
+    proxy.$modal.msgSuccess("上传成功")
+  } else {
+    proxy.$modal.msgError(res.msg)
   }
 }
 
@@ -394,11 +397,11 @@ function beforeUpload(file, allowedTypes, maxSizeMB) {
   const isValidSize = file.size / 1024 / 1024 < maxSizeMB
 
   if (!isValidType) {
-    this.$message.error(`仅支持 ${allowedTypes.join('/')} 格式`)
+    ElMessage.error(`仅支持 ${allowedTypes.join('/')} 格式`)
     return false
   }
   if (!isValidSize) {
-    this.$message.error(`文件大小不能超过${maxSizeMB}MB`)
+    ElMessage.error(`文件大小不能超过${maxSizeMB}MB`)
     return false
   }
   return true

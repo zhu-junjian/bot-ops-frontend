@@ -189,7 +189,7 @@
            <el-form-item label="动作文件" prop="actionUrl">
              <el-upload
                  v-model:file-list="form.actionFiles"
-                 action="/dev-api/template/upload"
+                 :action="uploadUrl"
                  :on-success="(res) => handleSuccess(res, 'actionUrl')"
                  :before-upload="(file) => beforeUpload(file, ['png', 'jpg','csv'], 50)"
                  :accept="'.png,.jpg,.csv'">
@@ -219,7 +219,7 @@
            <el-form-item label="视频文件" prop="videoUrl">
              <el-upload
                  v-model:file-list="form.videoFiles"
-                 action="/dev-api/template/upload"
+                 :action="uploadUrl"
                  :on-success="(res) => handleSuccess(res, 'videoUrl')"
                  :before-upload="(file) => beforeUpload(file, ['mp4', 'mov','gif'], 500)"
                  :accept="'.mp4,.mov,.gif'">
@@ -243,7 +243,7 @@
            <el-form-item label="音频文件" prop="audioUrl">
              <el-upload
                  v-model:file-list="form.audioFiles"
-                 action="/dev-api/template/upload"
+                 :action="uploadUrl"
                  :on-success="(res) => handleSuccess(res, 'audioUrl')"
                  :before-upload="(file) => beforeUpload(file, ['mp3'], 500)"
                  :accept="'.mp3'">
@@ -267,7 +267,7 @@
            <el-form-item label="模板封面" prop="coverUrl">
              <el-upload
                  v-model:file-list="form.coverUrlFiles"
-                 action="/dev-api/template/upload"
+                 :action="uploadUrl"
                  :on-success="(res) => handleSuccess(res, 'coverUrl')"
                  :before-upload="(file) => beforeUpload(file, ['png', 'jpg'], 500)"
                  :accept="'.jpg,.png'">
@@ -291,7 +291,7 @@
            <el-form-item label="模板内容" prop="coverContentUrl">
              <el-upload
                  v-model:file-list="form.coverContentFiles"
-                 action="/dev-api/template/upload"
+                 :action="uploadUrl"
                  :on-success="(res) => handleSuccess(res, 'coverContentUrl')"
                  :before-upload="(file) => beforeUpload(file, ['mp4', 'mov'], 500)"
                  :accept="'.mp4,.mov'">
@@ -392,6 +392,8 @@ import {
 } from "@/api/system/template";
 import { roleMenuTreeselect, treeselect as menuTreeselect } from "@/api/system/menu";
 import { ref, reactive, onMounted } from 'vue'
+
+const uploadUrl = import.meta.env.VITE_APP_BASE_API + '/template/upload';
 import { getCategoryList } from '@/api/system/template'
 import { getCategoryTypeList } from '@/api/system/category'
 
@@ -576,9 +578,10 @@ function handleDelete(row) {
 // 统一上传成功处理
 function handleSuccess(res, field) {
   if (res.code === 200) {
-    this.form[field] = res.msg
-    /*console.log("this.message:"+this.form["fileList"]);*/
-    //this.$message.success(`${field}上传成功`)
+    form.value[field] = res.url || res.msg
+    proxy.$modal.msgSuccess("上传成功")
+  } else {
+    proxy.$modal.msgError(res.msg)
   }
 }
 
@@ -589,11 +592,11 @@ function beforeUpload(file, allowedTypes, maxSizeMB) {
   const isValidSize = file.size / 1024 / 1024 < maxSizeMB
 
   if (!isValidType) {
-    this.$message.error(`仅支持 ${allowedTypes.join('/')} 格式`)
+    ElMessage.error(`仅支持 ${allowedTypes.join('/')} 格式`)
     return false
   }
   if (!isValidSize) {
-    this.$message.error(`文件大小不能超过${maxSizeMB}MB`)
+    ElMessage.error(`文件大小不能超过${maxSizeMB}MB`)
     return false
   }
   return true
@@ -669,7 +672,7 @@ function getDeptAllCheckedKeys() {
 
 /** 重置新增的表单以及其他数据  */
 function reset() {
-  if (menuRef.value != undefined) {
+  if (menuRef.value !== undefined) {
     menuRef.value.setCheckedKeys([]);
   }
   menuExpand.value = false;
@@ -682,6 +685,10 @@ function reset() {
     roleKey: undefined,
     officialWeight: 0,
     actionUrl:undefined,
+    videoUrl:undefined,
+    audioUrl:undefined,
+    coverUrl:undefined,
+    coverContent:undefined,
     status: "0",
     actionFiles:[],
     videoFiles:[],
@@ -743,12 +750,12 @@ function getDeptTree(roleId) {
 
 /** 树权限（展开/折叠）*/
 function handleCheckedTreeExpand(value, type) {
-  if (type == "menu") {
+  if (type === "menu") {
     let treeList = menuOptions.value;
     for (let i = 0; i < treeList.length; i++) {
       menuRef.value.store.nodesMap[treeList[i].id].expanded = value;
     }
-  } else if (type == "dept") {
+  } else if (type === "dept") {
     let treeList = deptOptions.value;
     for (let i = 0; i < treeList.length; i++) {
       deptRef.value.store.nodesMap[treeList[i].id].expanded = value;
@@ -758,18 +765,18 @@ function handleCheckedTreeExpand(value, type) {
 
 /** 树权限（全选/全不选） */
 function handleCheckedTreeNodeAll(value, type) {
-  if (type == "menu") {
+  if (type === "menu") {
     menuRef.value.setCheckedNodes(value ? menuOptions.value : []);
-  } else if (type == "dept") {
+  } else if (type === "dept") {
     deptRef.value.setCheckedNodes(value ? deptOptions.value : []);
   }
 }
 
 /** 树权限（父子联动） */
 function handleCheckedTreeConnect(value, type) {
-  if (type == "menu") {
+  if (type === "menu") {
     form.value.menuCheckStrictly = value ? true : false;
-  } else if (type == "dept") {
+  } else if (type === "dept") {
     form.value.deptCheckStrictly = value ? true : false;
   }
 }
@@ -788,7 +795,7 @@ function getMenuAllCheckedKeys() {
 function submitForm() {
   proxy.$refs["roleRef"].validate(valid => {
     if (valid) {
-      if (form.value.id != undefined) {
+      if (form.value.id !== undefined) {
         updateRole(form.value).then(response => {
           proxy.$modal.msgSuccess("修改成功");
           open.value = false;
@@ -840,7 +847,7 @@ function handleDataScope(row) {
 
 /** 提交按钮（数据权限） */
 function submitDataScope() {
-  if (form.value.roleId != undefined) {
+  if (form.value.roleId !== undefined) {
     form.value.deptIds = getDeptAllCheckedKeys();
     dataScope(form.value).then(response => {
       proxy.$modal.msgSuccess("修改成功");

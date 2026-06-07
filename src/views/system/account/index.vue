@@ -144,13 +144,34 @@ import {
   listRole,
   updateRole,
   deptTreeSelect,
-  changeStatus, orgTreeSelect, updateUserOrg
+  changeStatus, orgTreeSelect, updateUserOrg, usernameCheck
 } from "@/api/system/account";
 import { roleMenuTreeselect, treeselect as menuTreeselect } from "@/api/system/menu";
 
 const router = useRouter();
 const { proxy } = getCurrentInstance();
 const { sys_normal_disable } = proxy.useDict("sys_normal_disable");
+const validateUsername = async (rule, value, callback) => {
+  if (!value) {
+    return callback(new Error('用户名称不能为空'));
+  }
+
+  // 如果是修改操作且用户名没变，则不需要校验
+  if (form.value.id !== undefined) {
+    return callback();
+  }
+
+  try {
+    const response = await usernameCheck(value);
+    if (response.data === 1) {
+      callback(new Error("该用户名已存在，请更换"));
+    } else {
+      callback();
+    }
+  } catch (error) {
+    callback();
+  }
+};
 
 import { ref, reactive, onMounted } from 'vue'
 import { getCategoryTypeList } from '@/api/system/category'
@@ -250,7 +271,8 @@ const data = reactive({
     /*status: undefined*/
   },
   rules: {
-    username: [{ required: true, message: "用户名称不能为空", trigger: "blur" }],
+    username: [{ required: true, message: "用户名称不能为空", trigger: "blur" },
+               { validator: validateUsername, trigger: "blur" }],
     password: [{ required: true, message: "密码不能为空", trigger: "blur" }]
   },
 });

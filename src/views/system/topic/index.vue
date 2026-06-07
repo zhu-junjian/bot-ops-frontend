@@ -402,9 +402,10 @@ function handleDelete(row) {
 // 统一上传成功处理
 function handleSuccess(res, field) {
   if (res.code === 200) {
-    this.form[field] = res.msg
-    /*console.log("this.message:"+this.form["fileList"]);*/
-    //this.$message.success(`${field}上传成功`)
+    form.value[field] = res.url || res.msg
+    proxy.$modal.msgSuccess("上传成功")
+  } else {
+    proxy.$modal.msgError(res.msg)
   }
 }
 
@@ -415,11 +416,11 @@ function beforeUpload(file, allowedTypes, maxSizeMB) {
   const isValidSize = file.size / 1024 / 1024 < maxSizeMB
 
   if (!isValidType) {
-    this.$message.error(`仅支持 ${allowedTypes.join('/')} 格式`)
+    ElMessage.error(`仅支持 ${allowedTypes.join('/')} 格式`)
     return false
   }
   if (!isValidSize) {
-    this.$message.error(`文件大小不能超过${maxSizeMB}MB`)
+    ElMessage.error(`文件大小不能超过${maxSizeMB}MB`)
     return false
   }
   return true

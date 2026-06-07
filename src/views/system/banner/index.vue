@@ -160,37 +160,70 @@
            <el-form-item label="封面" prop="backgroundUrl">
              <el-upload
                  v-model:file-list="form.backgroundUrlFiles"
-                 action="/dev-api/template/upload"
+                 :action="uploadUrl"
                  :on-success="(res) => handleSuccess(res, 'backgroundUrl')"
                  :before-upload="(file) => beforeUpload(file, ['png', 'jpg','jpeg','mov', 'mp4'], 500)"
                  :accept="'.jpg,.png,.jpeg,.mov,.mp4'">
                <el-button type="primary">点击上传</el-button>
                <div class="el-upload__tip">支持.jpg/.png/.jpeg/.mov/.mp4</div>
              </el-upload>
+             <!-- 新增的文件链接展示区域 -->
+             <div class="file-links-container" >
+               <div class="link-list">
+                 <el-input
+                     v-model="form.backgroundUrl"
+                     readonly
+                     placeholder="未上传封面"
+                     class="link-input">
+                 </el-input>
+               </div>
+             </div>
            </el-form-item>
            <!-- 内容-->
            <el-form-item label="内容" prop="contentUrl">
              <el-upload
                  v-model:file-list="form.contentUrlFiles"
-                 action="/dev-api/template/upload"
+                 :action="uploadUrl"
                  :on-success="(res) => handleSuccess(res, 'contentUrl')"
                  :before-upload="(file) => beforeUpload(file, ['png', 'jpg','jpeg','mov', 'mp4'], 500)"
                  :accept="'.jpg,.png,.jpeg,.mov,.mp4'">
                <el-button type="primary">点击上传</el-button>
                <div class="el-upload__tip">支持.jpg/.png/.jpeg/.mov/.mp4</div>
              </el-upload>
+             <!-- 新增的文件链接展示区域 -->
+             <div class="file-links-container" >
+               <div class="link-list">
+                 <el-input
+                     v-model="form.contentUrl"
+                     readonly
+                     placeholder="未上传内容"
+                     class="link-input">
+                 </el-input>
+               </div>
+             </div>
            </el-form-item>
            <!-- 落地页-->
            <el-form-item label="落地页" prop="targetUrl">
              <el-upload
                  v-model:file-list="form.targetUrlFiles"
-                 action="/dev-api/template/upload"
+                 :action="uploadUrl"
                  :on-success="(res) => handleSuccess(res, 'targetUrl')"
                  :before-upload="(file) => beforeUpload(file, ['png', 'jpg','jpeg','mov', 'mp4'], 500)"
                  :accept="'.jpg,.png,.jpeg,.mov,.mp4'">
                <el-button type="primary">点击上传</el-button>
                <div class="el-upload__tip">支持.jpg/.png/.jpeg/.mov/.mp4</div>
              </el-upload>
+             <!-- 新增的文件链接展示区域 -->
+             <div class="file-links-container" >
+               <div class="link-list">
+                 <el-input
+                     v-model="form.targetUrl"
+                     readonly
+                     placeholder="未上传落地页"
+                     class="link-input">
+                 </el-input>
+               </div>
+             </div>
            </el-form-item>
          </el-form>
          <template #footer>
@@ -218,12 +251,13 @@ import {
 } from "@/api/system/banner.js";
 import { roleMenuTreeselect, treeselect as menuTreeselect } from "@/api/system/menu.js";
 import { ref, reactive, onMounted } from 'vue'
+
+const uploadUrl = import.meta.env.VITE_APP_BASE_API + '/template/upload';
 //import { getCategoryList } from '@/api/system/template'
 //import { getActiveCategoryTypeList } from '@/api/system/postRecord'
 
 // 当一级选择变化时
 const handleTypeChange = async (typeId) => {
-  console.log("why")
   // 1. 立即清空二级分类的值和选项
   form.value.categoryId = null;     // 清空选中值
     // 清空旧选项（注意使用.value）
@@ -435,9 +469,10 @@ function handleDelete(row) {
 // 统一上传成功处理
 function handleSuccess(res, field) {
   if (res.code === 200) {
-    this.form[field] = res.msg
-    /*console.log("this.message:"+this.form["fileList"]);*/
-    //this.$message.success(`${field}上传成功`)
+    form.value[field] = res.url || res.msg
+    proxy.$modal.msgSuccess("上传成功")
+  } else {
+    proxy.$modal.msgError(res.msg)
   }
 }
 
@@ -448,11 +483,11 @@ function beforeUpload(file, allowedTypes, maxSizeMB) {
   const isValidSize = file.size / 1024 / 1024 < maxSizeMB
 
   if (!isValidType) {
-    this.$message.error(`仅支持 ${allowedTypes.join('/')} 格式`)
+    ElMessage.error(`仅支持 ${allowedTypes.join('/')} 格式`)
     return false
   }
   if (!isValidSize) {
-    this.$message.error(`文件大小不能超过${maxSizeMB}MB`)
+    ElMessage.error(`文件大小不能超过${maxSizeMB}MB`)
     return false
   }
   return true
@@ -541,7 +576,11 @@ function reset() {
     roleKey: undefined,
     weight: 0,
     actionUrl:undefined,
+    backgroundUrl:undefined,
+    contentUrl:undefined,
+    targetUrl:undefined,
     status: "0",
+    contentFiles:[],
     actionFiles:[],
     videoFiles:[],
     audioFiles:[],

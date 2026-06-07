@@ -1,5 +1,12 @@
 import request from '@/utils/request'
 
+//重名校验
+export function usernameCheck(username){
+  return request({
+    url:'/corm/user/usernameCheck/'+username,
+    method: 'get'
+  })
+}
 
 export function updateUserOrg(data) {
   return request({

@@ -388,7 +388,7 @@
                <!-- 文件链接 -->
                <el-upload
                    v-model:file-list="form.actionFiles"
-                   action="/dev-api/template/upload"
+                   :action="uploadUrl"
                    :on-success="(res) => handleSuccess(res, 'actionUrl')"
                    :before-upload="(file) => beforeUpload(file, ['png', 'jpg','csv'], 500)"
                    :accept="'.png,.jpg,.csv'"
@@ -418,7 +418,7 @@
              <el-form-item label="动画文件" prop="mediaUrl">
                <el-upload
                    v-model:file-list="form.videoFiles"
-                   action="/dev-api/template/upload"
+                   :action="uploadUrl"
                    :on-success="(res) => handleSuccess(res, 'mediaUrl')"
                    :before-upload="(file) => beforeUpload(file, ['png', 'jpg','jpeg','mp4', 'mov','gif'], 500)"
                    :accept="'.mp4,.mov,.png,.jpg,.csv,.jpeg,.gif'">
@@ -442,7 +442,7 @@
              <el-form-item label="音频文件" prop="audioUrl">
                <el-upload
                    v-model:file-list="form.audioFiles"
-                   action="/dev-api/template/upload"
+                   :action="uploadUrl"
                    :on-success="(res) => handleSuccess(res, 'audioUrl')"
                    :before-upload="(file) => beforeUpload(file, ['mp3'], 500)"
                    :accept="'.mp3'">
@@ -468,7 +468,7 @@
            <el-form-item label="社区封面" prop="coverUrl">
              <el-upload
                  v-model:file-list="form.coverUrlFiles"
-                 action="/dev-api/template/upload"
+                 :action="uploadUrl"
                  :on-success="(res) => handleSuccess(res, 'coverUrl')"
                  :before-upload="(file) => beforeUpload(file, ['png', 'jpg','jpeg', 'jpeg'], 500)"
                  :accept="'.jpg,.png,.jpeg'">
@@ -492,7 +492,7 @@
            <el-form-item label="社区视频/图片" prop="coverContent">
              <el-upload
                  v-model:file-list="form.coverContentFiles"
-                 action="/dev-api/template/upload"
+                 :action="uploadUrl"
                  :on-success="(res) => handleSuccess(res, 'coverContent')"
                  :before-upload="(file) => beforeUpload(file, ['png', 'jpg','csv','mp4', 'mov'], 500)"
                  :accept="'.mp4,.mov,.png,.jpg,.csv'">
@@ -566,6 +566,8 @@ import {
 } from "@/api/system/postRecord";
 import { roleMenuTreeselect, treeselect as menuTreeselect } from "@/api/system/menu";
 import { ref, reactive, onMounted } from 'vue'
+
+const uploadUrl = import.meta.env.VITE_APP_BASE_API + '/template/upload';
 import {OfficeBuilding} from "@element-plus/icons-vue";
 //import { getCategoryList } from '@/api/system/template'
 //import { getActiveCategoryTypeList } from '@/api/system/postRecord'
@@ -968,9 +970,9 @@ function handleDelete(row) {
 // 统一上传成功处理
 function handleSuccess(res, field) {
   if (res.code === 200) {
-    this.form[field] = res.msg
-    /*console.log("this.message:"+this.form["fileList"]);*/
-    //this.$message.success(`${field}上传成功`)
+    form.value[field] = res.msg
+    /*console.log("form[field]:"+form.value[field]);*/
+    proxy.$modal.msgSuccess(`${field}上传成功`)
   }
 }
 
@@ -981,11 +983,11 @@ function beforeUpload(file, allowedTypes, maxSizeMB) {
   const isValidSize = file.size / 1024 / 1024 < maxSizeMB
 
   if (!isValidType) {
-    this.$message.error(`仅支持 ${allowedTypes.join('/')} 格式`)
+    ElMessage.error(`仅支持 ${allowedTypes.join('/')} 格式`)
     return false
   }
   if (!isValidSize) {
-    this.$message.error(`文件大小不能超过${maxSizeMB}MB`)
+    ElMessage.error(`文件大小不能超过${maxSizeMB}MB`)
     return false
   }
   return true
