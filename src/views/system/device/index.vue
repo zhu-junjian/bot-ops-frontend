@@ -1,0 +1,333 @@
+<template>
+   <div class="app-container">
+      <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch">
+         <el-form-item label="设备SN" prop="serialNum">
+            <el-input
+               v-model="queryParams.serialNum"
+               placeholder="请输入设备序列号"
+               clearable
+               style="width: 200px"
+               @keyup.enter="handleQuery"
+            />
+         </el-form-item>
+         <el-form-item label="设备型号" prop="deviceModel">
+            <el-select
+               v-model="queryParams.deviceModel"
+               placeholder="请选择设备型号"
+               clearable
+               style="width: 200px"
+            >
+               <el-option label="C1" value="C1" />
+               <el-option label="C2" value="C2" />
+            </el-select>
+         </el-form-item>
+         <el-form-item label="在线状态" prop="currentStatus">
+            <el-select
+               v-model="queryParams.currentStatus"
+               placeholder="请选择状态"
+               clearable
+               style="width: 200px"
+            >
+               <el-option label="在线" value="online" />
+               <el-option label="离线" value="offline" />
+               <el-option label="疑似" value="suspect" />
+               <el-option label="维护中" value="maintenance" />
+               <el-option label="故障" value="fault" />
+               <el-option label="报废" value="scrapped" />
+            </el-select>
+         </el-form-item>
+         <el-form-item label="设备名称" prop="name">
+            <el-input
+               v-model="queryParams.name"
+               placeholder="请输入设备名称"
+               clearable
+               style="width: 200px"
+               @keyup.enter="handleQuery"
+            />
+         </el-form-item>
+         <el-form-item label="最后心跳" style="width: 308px">
+            <el-date-picker
+               v-model="dateRange"
+               value-format="YYYY-MM-DD"
+               type="daterange"
+               range-separator="-"
+               start-placeholder="开始日期"
+               end-placeholder="结束日期"
+            ></el-date-picker>
+         </el-form-item>
+         <el-form-item>
+            <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
+            <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+         </el-form-item>
+      </el-form>
+
+      <el-row :gutter="10" class="mb8">
+         <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
+      </el-row>
+
+      <el-table v-loading="loading" :data="deviceList" style="width: 100%">
+         <el-table-column label="序号" width="50" type="index" align="center">
+            <template #default="scope">
+               <span>{{ (queryParams.pageNum - 1) * queryParams.pageSize + scope.$index + 1 }}</span>
+            </template>
+         </el-table-column>
+         <el-table-column label="设备SN" align="center" prop="serialNum" width="180" :show-overflow-tooltip="true" />
+         <el-table-column label="设备型号" align="center" prop="deviceModel" width="90" />
+         <el-table-column label="设备名称" align="center" prop="name" width="140" :show-overflow-tooltip="true" />
+         <el-table-column label="IP地址" align="center" prop="deviceIp" width="140" />
+         <el-table-column label="电量" align="center" prop="batteryLevel" width="80">
+            <template #default="scope">
+               <span v-if="scope.row.batteryLevel != null">{{ scope.row.batteryLevel }}%</span>
+               <span v-else>-</span>
+            </template>
+         </el-table-column>
+         <el-table-column label="在线状态" align="center" prop="currentStatus" width="100">
+            <template #default="scope">
+               <el-tag :type="statusTagType(scope.row.currentStatus)">
+                  {{ statusLabel(scope.row.currentStatus) }}
+               </el-tag>
+            </template>
+         </el-table-column>
+         <el-table-column label="最后心跳" align="center" prop="lastHeartbeat" width="170">
+            <template #default="scope">
+               <span>{{ scope.row.lastHeartbeat ? parseTime(scope.row.lastHeartbeat) : '-' }}</span>
+            </template>
+         </el-table-column>
+         <el-table-column label="日志拉取" align="center" width="220">
+            <template #default="scope">
+               <el-tag v-if="scope.row.logPullStatus === 'SENT'" type="info">已发送</el-tag>
+               <el-tag v-else-if="scope.row.logPullStatus === 'ACKED'" type="warning">
+                  已接受{{ scope.row.logPullBatch != null ? ' 批次#' + scope.row.logPullBatch : '' }}
+               </el-tag>
+               <span v-else>-</span>
+            </template>
+         </el-table-column>
+         <el-table-column label="位置" align="center" prop="location" min-width="120" :show-overflow-tooltip="true" />
+         <el-table-column label="备注" align="center" prop="notes" min-width="140" :show-overflow-tooltip="true" />
+         <el-table-column label="操作" align="center" width="100" fixed="right">
+            <template #default="scope">
+               <el-button
+                  type="primary"
+                  link
+                  size="small"
+                  :disabled="scope.row.currentStatus !== 'online'"
+                  @click="openPullDialog(scope.row)"
+               >日志拉取</el-button>
+            </template>
+         </el-table-column>
+      </el-table>
+
+      <pagination
+         v-show="total > 0"
+         :total="total"
+         v-model:page="queryParams.pageNum"
+         v-model:limit="queryParams.pageSize"
+         @pagination="getList"
+      />
+
+      <!-- 日志拉取对话框 -->
+      <el-dialog title="日志拉取" v-model="pullDialog.visible" width="550px" @close="closePullDialog">
+         <el-form :model="pullForm" label-width="100px">
+            <el-form-item label="设备SN">
+               <span>{{ pullDialog.deviceSn }}</span>
+            </el-form-item>
+            <el-form-item label="时间范围" prop="timeRange" required>
+               <el-date-picker
+                  v-model="pullForm.timeRange"
+                  type="datetimerange"
+                  range-separator="至"
+                  start-placeholder="开始时间"
+                  end-placeholder="结束时间"
+                  value-format="x"
+                  style="width: 100%"
+               />
+            </el-form-item>
+            <el-form-item label="组件" prop="componentIds">
+               <el-checkbox-group v-model="pullForm.componentIds">
+                  <el-checkbox :label="0">运动控制</el-checkbox>
+                  <el-checkbox :label="1">App客户端</el-checkbox>
+                  <el-checkbox :label="2">控制路由</el-checkbox>
+                  <el-checkbox :label="3">固件升级</el-checkbox>
+                  <el-checkbox :label="4">系统监控</el-checkbox>
+                  <el-checkbox :label="5">日志管理</el-checkbox>
+                  <el-checkbox :label="6">JOURNAL</el-checkbox>
+               </el-checkbox-group>
+               <div style="color: #999; font-size: 12px;">留空表示拉取全部组件日志</div>
+            </el-form-item>
+         </el-form>
+
+         <!-- 状态提示 -->
+         <div v-if="pullDialog.status" style="text-align: center; padding: 12px 0;">
+            <el-alert
+               :title="pullDialog.status"
+               :type="pullDialog.statusType"
+               :closable="false"
+               show-icon
+            />
+         </div>
+
+         <template #footer>
+            <el-button @click="closePullDialog">取消</el-button>
+            <el-button type="primary" @click="submitPull" :loading="pullDialog.submitting" :disabled="pullDialog.polling">
+               确认下发
+            </el-button>
+         </template>
+      </el-dialog>
+   </div>
+</template>
+
+<script setup name="Device">
+import { listDevice, pullDeviceLog, getLogPullStatus } from "@/api/system/device";
+
+const { proxy } = getCurrentInstance();
+
+const deviceList = ref([]);
+const loading = ref(true);
+const showSearch = ref(true);
+const total = ref(0);
+const dateRange = ref([]);
+
+const statusMap = {
+  online:      { label: '在线',   type: 'success' },
+  offline:     { label: '离线',   type: 'info' },
+  suspect:     { label: '疑似',   type: 'warning' },
+  maintenance: { label: '维护中', type: '' },
+  fault:       { label: '故障',   type: 'danger' },
+  scrapped:    { label: '报废',   type: 'info' }
+};
+
+const data = reactive({
+  queryParams: {
+    pageNum: 1,
+    pageSize: 10,
+    serialNum: undefined,
+    deviceModel: undefined,
+    currentStatus: undefined,
+    name: undefined
+  }
+});
+
+const { queryParams } = toRefs(data);
+
+function statusLabel(status) {
+  return statusMap[status]?.label || status;
+}
+
+function statusTagType(status) {
+  return statusMap[status]?.type || 'info';
+}
+
+/** 查询设备列表 */
+function getList() {
+  loading.value = true;
+  listDevice(proxy.addDateRange(queryParams.value, dateRange.value)).then(response => {
+    deviceList.value = response.rows;
+    total.value = response.total;
+    loading.value = false;
+  });
+}
+
+/** 搜索按钮操作 */
+function handleQuery() {
+  queryParams.value.pageNum = 1;
+  getList();
+}
+
+/** 重置按钮操作 */
+function resetQuery() {
+  dateRange.value = [];
+  proxy.resetForm("queryRef");
+  handleQuery();
+}
+
+// ============ 日志拉取 ============
+
+const pullDialog = reactive({
+  visible: false,
+  deviceSn: '',
+  status: '',
+  statusType: 'info',
+  submitting: false,
+  polling: false,
+  timer: null
+});
+
+const pullForm = reactive({
+  timeRange: [],
+  componentIds: []
+});
+
+function openPullDialog(row) {
+  pullDialog.deviceSn = row.serialNum;
+  pullDialog.visible = true;
+  pullDialog.status = '';
+  pullDialog.submitting = false;
+  pullDialog.polling = false;
+  pullForm.timeRange = [];
+  pullForm.componentIds = [];
+}
+
+function closePullDialog() {
+  if (pullDialog.timer) {
+    clearInterval(pullDialog.timer);
+    pullDialog.timer = null;
+  }
+  pullDialog.visible = false;
+  pullDialog.polling = false;
+}
+
+function submitPull() {
+  if (!pullForm.timeRange || pullForm.timeRange.length !== 2) {
+    proxy.$modal.msgWarning("请选择时间范围");
+    return;
+  }
+
+  pullDialog.submitting = true;
+  pullDialog.status = '';
+
+  const params = {
+    serial_num: pullDialog.deviceSn,
+    component_ids: pullForm.componentIds,
+    timestamp_start: Math.floor(pullForm.timeRange[0] / 1000),
+    timestamp_end: Math.floor(pullForm.timeRange[1] / 1000)
+  };
+
+  pullDeviceLog(params).then(() => {
+    pullDialog.submitting = false;
+    pullDialog.polling = true;
+    pullDialog.status = '等待设备应答...';
+    pullDialog.statusType = 'info';
+
+    // 轮询状态
+    let pollCount = 0;
+    pullDialog.timer = setInterval(() => {
+      pollCount++;
+      getLogPullStatus(pullDialog.deviceSn).then(res => {
+        const status = res?.data ?? res?.msg;
+        if (status === 'ACKED') {
+          clearInterval(pullDialog.timer);
+          pullDialog.timer = null;
+          pullDialog.polling = false;
+          pullDialog.status = '设备已接受，上传中';
+          pullDialog.statusType = 'success';
+          getList();
+        } else if (pollCount >= 10) {
+          clearInterval(pullDialog.timer);
+          pullDialog.timer = null;
+          pullDialog.polling = false;
+          pullDialog.status = '等待超时，请稍后刷新查看';
+          pullDialog.statusType = 'warning';
+          getList();
+        }
+      }).catch(err => {
+        console.error('轮询日志拉取状态失败:', err);
+      });
+    }, 3000);
+  }).catch(() => {
+    pullDialog.submitting = false;
+    proxy.$modal.msgError("下发失败，请重试");
+  });
+}
+
+getList();
+</script>

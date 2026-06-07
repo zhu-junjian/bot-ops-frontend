@@ -60,6 +60,13 @@ export function getActivity(roleId) {
   })
 }
 
+export function getRole(roleId) {
+  return request({
+    url: '/activity/' + roleId,
+    method: 'get'
+  })
+}
+
 // 新增角色
 export function addRole(data) {
   return request({
@@ -84,6 +91,14 @@ export function addActivity(data) {
 
 // 修改角色
 export function updateActivity(data) {
+  return request({
+    url: '/activity',
+    method: 'put',
+    data: data
+  })
+}
+
+export function updateRole(data) {
   return request({
     url: '/activity',
     method: 'put',
