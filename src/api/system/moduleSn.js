@@ -27,6 +27,32 @@ export function batchGenerateSn(data) {
   })
 }
 
+// 打印模组SN标签
+export function printModuleSn(data) {
+  return request({
+    url: '/module-sn/print',
+    method: 'post',
+    data
+  })
+}
+
+// 查询打印机状态
+export function getPrinterStatus() {
+  return request({
+    url: '/module-sn/printer-status',
+    method: 'get'
+  })
+}
+
+// 扫码枪入库 — 模组SN
+export function scanModuleSn(sn) {
+  return request({
+    url: '/module-inventory/scan',
+    method: 'post',
+    data: { sn }
+  })
+}
+
 // 删除模组SN
 export function delModuleSn(ids) {
   return request({
