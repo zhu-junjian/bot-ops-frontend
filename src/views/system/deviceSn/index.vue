@@ -526,8 +526,8 @@ function focusScanInput() {
   });
 }
 
-// 设备SN格式：C1/C2 + 工厂(GF/ZB/JS) + 硬件2位 + 日期6位 + 颜色(S/B) + 流水5位 = 18位
-const DEVICE_SN_RE = /^C[12](GF|ZB|JS)\d{2}\d{6}[SB]\d{5}$/;
+// 设备SN格式：C1/C2 + 硬件2位 + 工厂(GF/ZB/JS) + 日期6位 + 颜色(S/B) + 流水5位 = 18位
+const DEVICE_SN_RE = /^C[12]\d{2}(GF|ZB|JS)\d{6}[SB]\d{5}$/;
 
 function submitScan() {
   if (scanTimer) clearTimeout(scanTimer);
