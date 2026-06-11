@@ -6,7 +6,7 @@
                v-model="queryParams.sn"
                placeholder="请输入模组SN"
                clearable
-               style="width: 200px"
+               style="width: 280px"
                @keyup.enter="handleQuery"
             />
          </el-form-item>
@@ -73,6 +73,23 @@
                @click="handleGenerate"
                v-hasPermi="['system:moduleSn:add']"
             >生成SN</el-button>
+         </el-col>
+         <el-col :span="1.5">
+            <el-button
+               type="primary"
+               plain
+               icon="Scan"
+               @click="handleScan"
+            >扫码录入</el-button>
+         </el-col>
+         <el-col :span="1.5">
+            <el-button
+               type="success"
+               plain
+               icon="Printer"
+               :disabled="ids.length === 0"
+               @click="handlePrint"
+            >打印标签</el-button>
          </el-col>
          <el-col :span="1.5">
             <el-button
@@ -175,7 +192,7 @@
             <el-row :gutter="20">
                <el-col :span="12">
                   <el-form-item label="硬件版本" prop="hardwareVersion">
-                     <el-input v-model="generateForm.hardwareVersion" placeholder="01-99" maxlength="2" />
+                     <el-input v-model="generateForm.hardwareVersion" placeholder="0001-9999" maxlength="4" />
                   </el-form-item>
                </el-col>
                <el-col :span="12">
@@ -237,11 +254,74 @@
             <el-button type="primary" :loading="generateDialog.submitting" @click="submitGenerate">确认生成并入库</el-button>
          </template>
       </el-dialog>
+
+      <!-- 打印标签弹窗 -->
+      <el-dialog title="打印模组SN标签" v-model="printDialog.visible" width="480px" @close="resetPrintDialog">
+         <div style="margin-bottom: 16px;">
+            <el-alert type="info" :closable="false" show-icon>
+               <template #title>
+                  已选择 <strong>{{ ids.length }}</strong> 条模组SN，将生成标签并发送到打印机
+               </template>
+            </el-alert>
+         </div>
+         <el-form label-width="90px">
+            <el-form-item label="打印机状态">
+               <el-tag v-if="printDialog.printerOnline" type="success" effect="dark">
+                  <el-icon style="margin-right:4px"><CircleCheck /></el-icon> 在线
+               </el-tag>
+               <el-tag v-else-if="printDialog.checking" type="warning" effect="dark">
+                  <el-icon style="margin-right:4px"><Loading /></el-icon> 检测中...
+               </el-tag>
+               <el-tag v-else type="danger" effect="dark">
+                  <el-icon style="margin-right:4px"><CircleClose /></el-icon> 离线
+               </el-tag>
+               <span v-if="printDialog.printerHost" style="color:#999;font-size:12px;margin-left:8px;">
+                  {{ printDialog.printerHost }}
+               </span>
+            </el-form-item>
+         </el-form>
+         <template #footer>
+            <el-button @click="printDialog.visible = false">取消</el-button>
+            <el-button type="primary" :loading="printDialog.submitting" @click="submitPrint">
+               确认打印
+            </el-button>
+         </template>
+      </el-dialog>
+
+      <!-- 扫码录入弹窗 -->
+      <el-dialog title="扫码入库" v-model="scanDialog.visible" width="500px" @close="resetScanDialog" @opened="focusScanInput">
+         <div style="margin-bottom: 12px;">
+            <el-alert type="info" :closable="false" show-icon>
+               <template #title>请使用扫码枪扫描模组SN标签条形码</template>
+            </el-alert>
+         </div>
+         <el-input
+            ref="scanInputRef"
+            v-model="scanDialog.inputSn"
+            placeholder="光标在此，扫码后自动提交..."
+            size="large"
+            clearable
+            @keyup.enter="submitScan"
+            @keydown.enter="submitScan"
+         />
+         <div v-if="scanDialog.list.length > 0" style="margin-top:16px;max-height:200px;overflow-y:auto;">
+            <el-tag v-for="(item, idx) in scanDialog.list" :key="idx"
+                    :type="item.ok ? 'success' : 'danger'"
+                    style="display:block;margin-bottom:4px;text-align:left;">
+               {{ item.sn }} — {{ item.msg }}
+               <span style="float:right;font-size:11px;color:#999">{{ item.time }}</span>
+            </el-tag>
+         </div>
+         <template #footer>
+            <el-button @click="scanDialog.visible = false">关闭</el-button>
+            <span v-if="scanDialog.okCount > 0" style="color:#67c23a;margin-right:12px;">✅ 本次入库：{{ scanDialog.okCount }} 条</span>
+         </template>
+      </el-dialog>
    </div>
 </template>
 
 <script setup name="ModuleSn">
-import { listModuleSn, getNextSeq, batchGenerateSn, delModuleSn } from "@/api/system/moduleSn";
+import { listModuleSn, getNextSeq, batchGenerateSn, scanModuleSn, delModuleSn } from "@/api/system/moduleSn";
 
 const { proxy } = getCurrentInstance();
 
@@ -250,6 +330,7 @@ const loading = ref(true);
 const showSearch = ref(true);
 const total = ref(0);
 const ids = ref([]);
+const selectedRows = ref([]);
 
 const data = reactive({
   queryParams: {
@@ -317,7 +398,7 @@ const generateRules = {
   ],
   hardwareVersion: [
     { required: true, message: '请输入硬件版本', trigger: 'blur' },
-    { pattern: /^\d{2}$/, message: '硬件版本为2位数字，如 01', trigger: 'blur' }
+    { pattern: /^\d{4}$/, message: '硬件版本为4位数字（ABCD：结构/芯片/电机/其他电子），如 0100', trigger: 'blur' }
   ],
   productionDate: [
     { required: true, message: '请输入生产日期', trigger: 'blur' },
@@ -371,6 +452,145 @@ function padSeq(n) {
   return String(n).padStart(4, '0');
 }
 
+// ============ 打印标签 ============
+
+const printDialog = reactive({
+  visible: false,
+  submitting: false,
+  checking: false,
+  printerOnline: false,
+  printerHost: '',
+});
+
+function handlePrint() {
+  resetPrintDialog();
+  printDialog.visible = true;
+  checkPrinterStatus();
+}
+
+function resetPrintDialog() {
+  printDialog.submitting = false;
+  printDialog.checking = false;
+  printDialog.printerOnline = false;
+  printDialog.printerHost = '';
+}
+
+function checkPrinterStatus() {
+  printDialog.checking = true;
+  printDialog.printerOnline = false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  fetch('http://localhost:9876/api/status', { signal: controller.signal })
+    .then(r => r.json())
+    .then(res => {
+      clearTimeout(timer);
+      const d = res.data || {};
+      printDialog.printerOnline = d.online || d.found || false;
+      printDialog.printerHost = d.printerName || '';
+      printDialog.checking = false;
+    }).catch(() => {
+      clearTimeout(timer);
+      printDialog.printerOnline = false;
+      printDialog.checking = false;
+    });
+}
+
+async function submitPrint() {
+  if (!printDialog.printerOnline) {
+    proxy.$modal.msgWarning('打印机离线，请检查打印机连接后重试');
+    return;
+  }
+  printDialog.submitting = true;
+  try {
+    const items = selectedRows.value.map(row => ({
+      sn: row.sn
+      // 模组SN无WiFi名称
+    }));
+    const resp = await fetch('http://localhost:9876/api/print', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items })
+    });
+    const result = await resp.json();
+    if (result.success) {
+      proxy.$modal.msgSuccess(`已发送 ${result.data.success} 条标签到打印机`);
+    } else {
+      proxy.$modal.msgError('打印失败');
+    }
+    printDialog.visible = false;
+  } catch {
+    proxy.$modal.msgError('无法连接本地打印服务 (http://localhost:9876)，请确认 tsc-print-service 已启动');
+  } finally {
+    printDialog.submitting = false;
+  }
+}
+
+// ============ 扫码入库 ============
+
+const scanInputRef = ref(null);
+const scanDialog = reactive({
+  visible: false,
+  inputSn: '',
+  list: [],
+  okCount: 0
+});
+
+function handleScan() {
+  scanDialog.visible = true;
+  scanDialog.inputSn = '';
+  scanDialog.list = [];
+  scanDialog.okCount = 0;
+}
+
+function resetScanDialog() {
+  scanDialog.inputSn = '';
+}
+
+function focusScanInput() {
+  scanDialog.inputSn = '';
+  scanDialog.list = [];
+  scanDialog.okCount = 0;
+  nextTick(() => {
+    if (scanInputRef.value) scanInputRef.value.focus();
+  });
+}
+
+// 模组SN格式（V1.1 26位）：项目(2) + 物料分类(4) + 子分类(4) + 工厂(2) + 硬件(4) + 日期(6) + 流水(4)
+const MODULE_SN_RE = /^(C[12]|A2)[A-Z0-9]{4}[A-Z0-9]{4}(GF|ZB|JS)\d{4}\d{6}\d{4}$/;
+
+function submitScan() {
+  if (scanTimer) clearTimeout(scanTimer);
+  const sn = scanDialog.inputSn.trim();
+  if (!sn) return;
+  const now = new Date().toLocaleTimeString();
+  if (!MODULE_SN_RE.test(sn)) {
+    scanDialog.list.unshift({ sn, ok: false, msg: '格式错误（应为26位模组SN）', time: now });
+    scanDialog.inputSn = '';
+    nextTick(() => { if (scanInputRef.value) scanInputRef.value.focus(); });
+    return;
+  }
+  scanModuleSn(sn).then(res => {
+    scanDialog.list.unshift({ sn, ok: true, msg: res.msg || '入库成功', time: now });
+    scanDialog.okCount++;
+  }).catch(() => {
+    scanDialog.list.unshift({ sn, ok: false, msg: '入库失败（重复或不存在）', time: now });
+  });
+  scanDialog.inputSn = '';
+  nextTick(() => {
+    if (scanInputRef.value) scanInputRef.value.focus();
+  });
+}
+
+// 扫码枪停顿检测：输入变化后 150ms 无新字符 → 自动提交
+let scanTimer = null;
+watch(() => scanDialog.inputSn, (val) => {
+  if (!val || !scanDialog.visible) return;
+  if (scanTimer) clearTimeout(scanTimer);
+  scanTimer = setTimeout(() => {
+    submitScan();
+  }, 150);
+});
+
 // ============ 列表查询 ============
 
 function getList() {
@@ -396,6 +616,7 @@ function resetQuery() {
 
 function handleSelectionChange(selection) {
   ids.value = selection.map(item => item.id);
+  selectedRows.value = selection;
 }
 
 // ============ 生成SN ============

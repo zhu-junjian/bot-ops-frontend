@@ -68,6 +68,23 @@
          </el-col>
          <el-col :span="1.5">
             <el-button
+               type="primary"
+               plain
+               icon="Scan"
+               @click="handleScan"
+            >扫码录入</el-button>
+         </el-col>
+         <el-col :span="1.5">
+            <el-button
+               type="success"
+               plain
+               icon="Printer"
+               :disabled="ids.length === 0"
+               @click="handlePrint"
+            >打印标签</el-button>
+         </el-col>
+         <el-col :span="1.5">
+            <el-button
                type="warning"
                plain
                icon="Download"
@@ -211,11 +228,85 @@
             <el-button type="primary" :loading="generateDialog.submitting" @click="submitGenerate">确认生成并入库</el-button>
          </template>
       </el-dialog>
+
+      <!-- 打印标签弹窗 -->
+      <el-dialog title="打印标签" v-model="printDialog.visible" width="480px" @close="resetPrintDialog">
+         <div style="margin-bottom: 16px;">
+            <el-alert type="info" :closable="false" show-icon>
+               <template #title>
+                  已选择 <strong>{{ ids.length }}</strong> 条记录，将生成对应数量的标签并发送到打印机
+               </template>
+            </el-alert>
+         </div>
+
+         <el-form label-width="90px">
+            <el-form-item label="打印份数">
+               <el-input-number v-model="printDialog.copies" :min="1" :max="10" style="width: 160px" controls-position="right" />
+               <span style="color:#999; font-size:12px; margin-left:8px;">每张标签打印几份</span>
+            </el-form-item>
+            <el-form-item label="打印机状态">
+               <el-tag v-if="printDialog.printerOnline" type="success" effect="dark">
+                  <el-icon style="margin-right:4px"><CircleCheck /></el-icon> 在线
+               </el-tag>
+               <el-tag v-else-if="printDialog.checking" type="warning" effect="dark">
+                  <el-icon style="margin-right:4px"><Loading /></el-icon> 检测中...
+               </el-tag>
+               <el-tag v-else type="danger" effect="dark">
+                  <el-icon style="margin-right:4px"><CircleClose /></el-icon> 离线
+               </el-tag>
+               <span v-if="printDialog.printerHost" style="color:#999;font-size:12px;margin-left:8px;">
+                  {{ printDialog.printerHost }}:{{ printDialog.printerPort }}
+               </span>
+            </el-form-item>
+            <el-form-item label="标签尺寸">
+               <span style="color:#333;font-size:13px;">
+                  {{ printDialog.labelWidth }}mm × {{ printDialog.labelHeight }}mm
+               </span>
+            </el-form-item>
+         </el-form>
+
+         <template #footer>
+            <el-button @click="printDialog.visible = false">取消</el-button>
+            <el-button type="primary" :loading="printDialog.submitting" @click="submitPrint">
+               确认打印
+            </el-button>
+         </template>
+      </el-dialog>
+
+      <!-- 扫码录入弹窗 -->
+      <el-dialog title="扫码入库" v-model="scanDialog.visible" width="500px" @close="resetScanDialog" @opened="focusScanInput">
+         <div style="margin-bottom: 12px;">
+            <el-alert type="info" :closable="false" show-icon>
+               <template #title>请使用扫码枪扫描设备SN标签条形码</template>
+            </el-alert>
+         </div>
+         <el-input
+            ref="scanInputRef"
+            v-model="scanDialog.inputSn"
+            placeholder="光标在此，扫码后自动提交..."
+            size="large"
+            clearable
+            @keyup.enter="submitScan"
+            @keydown.enter="submitScan"
+         />
+         <div v-if="scanDialog.list.length > 0" style="margin-top:16px;max-height:200px;overflow-y:auto;">
+            <el-tag v-for="(item, idx) in scanDialog.list" :key="idx"
+                    :type="item.ok ? 'success' : 'danger'"
+                    style="display:block;margin-bottom:4px;text-align:left;">
+               {{ item.sn }} — {{ item.msg }}
+               <span style="float:right;font-size:11px;color:#999">{{ item.time }}</span>
+            </el-tag>
+         </div>
+         <template #footer>
+            <el-button @click="scanDialog.visible = false">关闭</el-button>
+            <span v-if="scanDialog.okCount > 0" style="color:#67c23a;margin-right:12px;">✅ 本次入库：{{ scanDialog.okCount }} 条</span>
+         </template>
+      </el-dialog>
    </div>
 </template>
 
 <script setup name="DeviceSn">
-import { listDeviceSn, getNextSeq, batchGenerateSn, delDeviceSn } from "@/api/system/deviceSn";
+import { listDeviceSn, getNextSeq, batchGenerateSn, scanDeviceSn, delDeviceSn } from "@/api/system/deviceSn";
 
 const { proxy } = getCurrentInstance();
 
@@ -224,6 +315,7 @@ const loading = ref(true);
 const showSearch = ref(true);
 const total = ref(0);
 const ids = ref([]);
+const selectedRows = ref([]); // 选中的完整行数据（用于打印）
 
 const data = reactive({
   queryParams: {
@@ -317,6 +409,159 @@ function padSeq(n) {
   return String(n).padStart(5, '0');
 }
 
+// ============ 打印标签 ============
+
+const printDialog = reactive({
+  visible: false,
+  submitting: false,
+  checking: false,
+  printerOnline: false,
+  printerHost: '',
+  printerPort: '',
+  labelWidth: 60,
+  labelHeight: 40,
+  copies: 1
+});
+
+function handlePrint() {
+  resetPrintDialog();
+  printDialog.visible = true;
+  checkPrinterStatus();
+}
+
+function resetPrintDialog() {
+  printDialog.submitting = false;
+  printDialog.checking = false;
+  printDialog.printerOnline = false;
+  printDialog.printerHost = '';
+  printDialog.printerPort = '';
+  printDialog.labelWidth = 60;
+  printDialog.labelHeight = 40;
+  printDialog.copies = 1;
+}
+
+/** 查询打印机状态 */
+function checkPrinterStatus() {
+  printDialog.checking = true;
+  printDialog.printerOnline = false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000); // 5秒超时
+  fetch('http://localhost:9876/api/status', { signal: controller.signal })
+    .then(r => r.json())
+    .then(res => {
+      clearTimeout(timer);
+      const d = res.data || {};
+      printDialog.printerOnline = d.online || d.found || false;
+      printDialog.printerHost = d.printerName || '';
+      printDialog.labelWidth = 60;
+      printDialog.labelHeight = 40;
+      printDialog.checking = false;
+    }).catch(() => {
+      clearTimeout(timer);
+      printDialog.printerOnline = false;
+      printDialog.checking = false;
+    });
+}
+
+/** 确认打印 — 直接调本地 Node.js 服务 */
+async function submitPrint() {
+  if (!printDialog.printerOnline) {
+    proxy.$modal.msgWarning('打印机离线，请检查打印机连接后重试');
+    return;
+  }
+  printDialog.submitting = true;
+  try {
+    const items = selectedRows.value.map(row => ({
+      sn: row.sn,
+      wifiName: row.wifiName
+    }));
+
+    const resp = await fetch('http://localhost:9876/api/print', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items })
+    });
+    const result = await resp.json();
+
+    if (result.success) {
+      proxy.$modal.msgSuccess(`已发送 ${result.data.success} 条标签到打印机`);
+    } else {
+      proxy.$modal.msgError('打印失败');
+    }
+    printDialog.visible = false;
+  } catch {
+    proxy.$modal.msgError('无法连接本地打印服务 (http://localhost:9876)，请确认 tsc-print-service 已启动');
+  } finally {
+    printDialog.submitting = false;
+  }
+}
+
+// ============ 扫码入库 ============
+
+const scanInputRef = ref(null);
+const scanDialog = reactive({
+  visible: false,
+  inputSn: '',
+  list: [],
+  okCount: 0
+});
+
+function handleScan() {
+  scanDialog.visible = true;
+  scanDialog.inputSn = '';
+  scanDialog.list = [];
+  scanDialog.okCount = 0;
+}
+
+function resetScanDialog() {
+  scanDialog.inputSn = '';
+}
+
+function focusScanInput() {
+  scanDialog.inputSn = '';
+  scanDialog.list = [];
+  scanDialog.okCount = 0;
+  nextTick(() => {
+    if (scanInputRef.value) scanInputRef.value.focus();
+  });
+}
+
+// 设备SN格式：C1/C2 + 工厂(GF/ZB/JS) + 硬件2位 + 日期6位 + 颜色(S/B) + 流水5位 = 18位
+const DEVICE_SN_RE = /^C[12](GF|ZB|JS)\d{2}\d{6}[SB]\d{5}$/;
+
+function submitScan() {
+  if (scanTimer) clearTimeout(scanTimer);
+  const sn = scanDialog.inputSn.trim();
+  if (!sn) return;
+  const now = new Date().toLocaleTimeString();
+  if (!DEVICE_SN_RE.test(sn)) {
+    scanDialog.list.unshift({ sn, ok: false, msg: '格式错误（应为18位设备SN）', time: now });
+    scanDialog.inputSn = '';
+    nextTick(() => { if (scanInputRef.value) scanInputRef.value.focus(); });
+    return;
+  }
+  scanDeviceSn(sn).then(res => {
+    scanDialog.list.unshift({ sn, ok: true, msg: res.msg || '入库成功', time: now });
+    scanDialog.okCount++;
+  }).catch(() => {
+    scanDialog.list.unshift({ sn, ok: false, msg: '入库失败（重复或不存在）', time: now });
+  });
+  scanDialog.inputSn = '';
+  nextTick(() => {
+    if (scanInputRef.value) scanInputRef.value.focus();
+  });
+}
+
+// 扫码枪停顿检测：输入变化后 150ms 无新字符 → 自动提交（兜底不发Enter的扫码枪）
+let scanTimer = null;
+watch(() => scanDialog.inputSn, (val) => {
+  if (!val || !scanDialog.visible) return;
+  if (scanTimer) clearTimeout(scanTimer);
+  scanTimer = setTimeout(() => {
+    submitScan();
+  }, 150);
+});
+
 // ============ 列表查询 ============
 
 function getList() {
@@ -342,6 +587,7 @@ function resetQuery() {
 
 function handleSelectionChange(selection) {
   ids.value = selection.map(item => item.id);
+  selectedRows.value = selection;
 }
 
 // ============ 生成SN ============
