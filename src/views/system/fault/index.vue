@@ -62,7 +62,7 @@
          <el-table-column label="严重等级" align="center" prop="severity" width="80" />
          <el-table-column label="故障码" align="center" prop="faultCode" width="180">
             <template #default="scope">
-               <span>0x{{ scope.row.faultCode?.toString(16).toUpperCase() }}</span>
+               <span>{{ scope.row.faultCodeHex }}</span>
             </template>
          </el-table-column>
          <el-table-column label="发生时间" align="center" prop="occurredTMs" width="170">
