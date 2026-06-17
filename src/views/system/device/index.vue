@@ -296,6 +296,13 @@
                </template>
             </el-table-column>
          </el-table>
+         <pagination
+            v-show="ipHistoryDialog.total > 0"
+            :total="ipHistoryDialog.total"
+            v-model:page="ipHistoryDialog.pageNum"
+            v-model:limit="ipHistoryDialog.pageSize"
+            @pagination="getIpHistory"
+         />
       </el-dialog>
    </div>
 </template>
@@ -339,15 +346,27 @@ const ipHistoryDialog = reactive({
   visible: false,
   sn: '',
   loading: false,
-  history: []
+  history: [],
+  total: 0,
+  pageNum: 1,
+  pageSize: 10
 });
 
 function openIpHistoryDialog(row) {
   ipHistoryDialog.sn = row.serialNum;
   ipHistoryDialog.visible = true;
+  ipHistoryDialog.pageNum = 1;
+  getIpHistory();
+}
+
+function getIpHistory() {
   ipHistoryDialog.loading = true;
-  listIpHistory(row.serialNum).then(response => {
+  listIpHistory(ipHistoryDialog.sn, {
+    pageNum: ipHistoryDialog.pageNum,
+    pageSize: ipHistoryDialog.pageSize
+  }).then(response => {
     ipHistoryDialog.history = response.rows;
+    ipHistoryDialog.total = response.total;
   }).finally(() => {
     ipHistoryDialog.loading = false;
   });
