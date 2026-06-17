@@ -153,7 +153,7 @@
             <el-row :gutter="20">
                <el-col :span="12">
                   <el-form-item label="归属项目" prop="projectCode">
-                     <el-select v-model="generateForm.projectCode" placeholder="请选择" style="width: 100%">
+                     <el-select v-model="generateForm.projectCode" placeholder="请选择" style="width: 100%" disabled>
                         <el-option label="C2" value="C2" />
                      </el-select>
                   </el-form-item>
@@ -436,7 +436,6 @@ const materialCategoryOptions = [
   { code: 'HIPX', name: '侧摆关节', subs: ['LFRR', 'LRRF'] },
   { code: 'HIPY', name: '髋关节',   subs: ['LFXX', 'RFXX', 'LRXX', 'RRXX'] },
   { code: 'KNEE', name: '膝关节',   subs: ['0STD', '0PRO'] },
-  { code: 'MAIN', name: '主控盒',   subs: ['A733'] },
   { code: 'BATY', name: '动力电池', subs: ['8S2P', '8S5P'] }
 ];
 
@@ -456,10 +455,10 @@ function onCategoryChange(val) {
 // ============ 生成弹窗 ============
 
 const generateFormDefault = {
-  projectCode: undefined,
+  projectCode: 'C2',
   materialCategory: undefined,
   materialSubCategory: undefined,
-  factoryCode: undefined,
+  factoryCode: 'JS',
   hardwareVersion: undefined,
   productionDate: undefined,
   quantity: 1
