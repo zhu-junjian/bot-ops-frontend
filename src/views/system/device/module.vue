@@ -1,10 +1,10 @@
 <template>
   <div class="app-container">
     <el-form :model="queryParams" ref="queryRef" :inline="true" v-show="showSearch" label-width="80px">
-      <el-form-item label="设备SN" prop="serialNum">
+      <el-form-item label="用户ID" prop="userId">
         <el-input
-          v-model="queryParams.serialNum"
-          placeholder="请输入设备SN"
+          v-model="queryParams.userId"
+          placeholder="请输入用户ID"
           clearable
           style="width: 200px"
           @keyup.enter="handleQuery"
@@ -40,7 +40,7 @@
     <el-table v-loading="loading" :data="moduleList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="编号" align="center" prop="id" width="80" />
-      <el-table-column label="设备SN" align="center" prop="serialNum" width="200" :show-overflow-tooltip="true" />
+      <el-table-column label="用户ID" align="center" prop="userId" width="120" />
       <el-table-column label="模块标识" align="center" prop="moduleKey" width="120" />
       <el-table-column label="模块名称" align="center" prop="moduleName" width="140" />
       <el-table-column label="状态" align="center" width="80">
@@ -50,7 +50,6 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="排序" align="center" prop="sortOrder" width="70" />
       <el-table-column label="创建时间" align="center" width="170">
         <template #default="scope">
           <span>{{ parseTime(scope.row.createTime) }}</span>
@@ -75,8 +74,8 @@
     <!-- 新增/编辑对话框 -->
     <el-dialog :title="title" v-model="open" width="500px" append-to-body @close="cancel">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="设备SN" prop="serialNum">
-          <el-input v-model="form.serialNum" placeholder="请输入设备序列号" />
+        <el-form-item label="用户ID" prop="userId">
+          <el-input-number v-model="form.userId" :min="1" placeholder="请输入用户ID" style="width: 100%" />
         </el-form-item>
         <el-form-item label="模块标识" prop="moduleKey">
           <el-select v-model="form.moduleKey" placeholder="请选择模块" style="width: 100%">
@@ -91,9 +90,6 @@
             <el-radio :value="1">启用</el-radio>
             <el-radio :value="0">禁用</el-radio>
           </el-radio-group>
-        </el-form-item>
-        <el-form-item label="排序" prop="sortOrder">
-          <el-input-number v-model="form.sortOrder" :min="0" :max="999" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -125,12 +121,12 @@ const data = reactive({
   queryParams: {
     pageNum: 1,
     pageSize: 10,
-    serialNum: undefined,
+    userId: undefined,
     moduleKey: undefined,
     enabled: undefined
   },
   rules: {
-    serialNum: [{ required: true, message: "设备SN不能为空", trigger: "blur" }],
+    userId: [{ required: true, message: "用户ID不能为空", trigger: "blur" }],
     moduleKey: [{ required: true, message: "模块标识不能为空", trigger: "change" }],
     moduleName: [{ required: true, message: "模块名称不能为空", trigger: "blur" }]
   }
@@ -158,11 +154,10 @@ function cancel() {
 function reset() {
   form.value = {
     id: undefined,
-    serialNum: undefined,
+    userId: undefined,
     moduleKey: undefined,
     moduleName: undefined,
-    enabled: 1,
-    sortOrder: 0
+    enabled: 1
   };
   proxy.resetForm("formRef");
 }
