@@ -17,9 +17,7 @@
                clearable
                style="width: 200px"
             >
-               <el-option label="C1" value="C1" />
                <el-option label="C2" value="C2" />
-               <el-option label="A2" value="A2" />
             </el-select>
          </el-form-item>
          <el-form-item label="物料分类" prop="materialCategory">
@@ -103,6 +101,15 @@
          </el-col>
          <el-col :span="1.5">
             <el-button
+               type="info"
+               plain
+               icon="Setting"
+               @click="handleHwDict"
+               v-hasPermi="['system:moduleSn:edit']"
+            >硬件版本枚举</el-button>
+         </el-col>
+         <el-col :span="1.5">
+            <el-button
                type="danger"
                plain
                icon="Delete"
@@ -147,9 +154,7 @@
                <el-col :span="12">
                   <el-form-item label="归属项目" prop="projectCode">
                      <el-select v-model="generateForm.projectCode" placeholder="请选择" style="width: 100%">
-                        <el-option label="C1" value="C1" />
                         <el-option label="C2" value="C2" />
-                        <el-option label="A2" value="A2" />
                      </el-select>
                   </el-form-item>
                </el-col>
@@ -190,9 +195,28 @@
                </el-col>
             </el-row>
             <el-row :gutter="20">
-               <el-col :span="12">
+               <el-col :span="24">
                   <el-form-item label="硬件版本" prop="hardwareVersion">
-                     <el-input v-model="generateForm.hardwareVersion" placeholder="0001-9999" maxlength="4" />
+                     <div style="display:flex;gap:6px;align-items:center;width:100%;">
+                        <template v-for="(pos, idx) in ['A','B','C','D']" :key="pos">
+                           <span style="font-size:12px;flex-shrink:0;">{{ pos }}</span>
+                           <el-select
+                              v-model="hwSelect[pos.toLowerCase()]"
+                              :placeholder="pos"
+                              clearable
+                              style="flex:1;min-width:80px;"
+                              @change="onHwSelectChange"
+                           >
+                              <el-option
+                                 v-for="item in hwOptionsByPos[pos]"
+                                 :key="item.code"
+                                 :label="item.code + ' ' + item.name"
+                                 :value="item.code"
+                              />
+                           </el-select>
+                        </template>
+                        <span v-if="generateForm.hardwareVersion" style="color:#409eff;font-weight:bold;white-space:nowrap;flex-shrink:0;">= {{ generateForm.hardwareVersion }}</span>
+                     </div>
                   </el-form-item>
                </el-col>
                <el-col :span="12">
@@ -288,6 +312,65 @@
          </template>
       </el-dialog>
 
+      <!-- 硬件版本枚举维护弹窗 -->
+      <el-dialog title="硬件版本枚举维护" v-model="hwDictDialog.visible" width="750px" @close="resetHwDictDialog">
+         <el-row :gutter="10" style="margin-bottom: 12px;">
+            <el-col :span="6">
+               <el-select v-model="hwDictDialog.filterPosition" placeholder="按位筛选" clearable @change="loadHwDictList" style="width: 100%">
+                  <el-option label="A位" value="A" />
+                  <el-option label="B位" value="B" />
+                  <el-option label="C位" value="C" />
+                  <el-option label="D位" value="D" />
+               </el-select>
+            </el-col>
+            <el-col :span="6">
+               <el-button type="primary" icon="Plus" @click="handleHwDictAdd">新增</el-button>
+            </el-col>
+         </el-row>
+         <el-table v-loading="hwDictDialog.loading" :data="hwDictDialog.list" style="width: 100%">
+            <el-table-column label="位" align="center" prop="position" width="60" />
+            <el-table-column label="枚举值" align="center" prop="code" width="120" />
+            <el-table-column label="含义说明" align="center" prop="name" min-width="180" />
+            <el-table-column label="排序" align="center" prop="sortOrder" width="80" />
+            <el-table-column label="操作" align="center" width="140">
+               <template #default="scope">
+                  <el-button type="primary" link icon="Edit" @click="handleHwDictEdit(scope.row)">修改</el-button>
+                  <el-button type="danger" link icon="Delete" @click="handleHwDictDelete(scope.row)">删除</el-button>
+               </template>
+            </el-table-column>
+         </el-table>
+         <template #footer>
+            <el-button @click="hwDictDialog.visible = false">关闭</el-button>
+         </template>
+      </el-dialog>
+
+      <!-- 硬件版本枚举新增/编辑弹窗 -->
+      <el-dialog :title="hwDictForm.id ? '修改枚举' : '新增枚举'" v-model="hwDictForm.visible" width="480px" append-to-body @close="resetHwDictForm">
+         <el-form :model="hwDictForm" :rules="hwDictRules" ref="hwDictFormRef" label-width="90px">
+            <el-form-item label="位" prop="position">
+               <el-select v-model="hwDictForm.position" placeholder="请选择" style="width: 100%" :disabled="!!hwDictForm.id">
+                  <el-option label="A位" value="A" />
+                  <el-option label="B位" value="B" />
+                  <el-option label="C位" value="C" />
+                  <el-option label="D位" value="D" />
+               </el-select>
+            </el-form-item>
+            <el-form-item label="枚举值" prop="code">
+               <el-input v-model="hwDictForm.code" placeholder="如 1" maxlength="10" />
+            </el-form-item>
+            <el-form-item label="含义说明" prop="name">
+               <el-input v-model="hwDictForm.name" placeholder="如 GD平台" maxlength="50" />
+            </el-form-item>
+            <el-form-item label="排序" prop="sortOrder">
+               <el-input-number v-model="hwDictForm.sortOrder" :min="0" :max="9999" style="width: 100%" controls-position="right" />
+            </el-form-item>
+         </el-form>
+         <template #footer>
+            <el-button @click="hwDictForm.visible = false">取消</el-button>
+            <el-button type="primary" :loading="hwDictForm.submitting" @click="submitHwDictForm">确认</el-button>
+         </template>
+      </el-dialog>
+
       <!-- 扫码录入弹窗 -->
       <el-dialog title="扫码入库" v-model="scanDialog.visible" width="500px" @close="resetScanDialog" @opened="focusScanInput">
          <div style="margin-bottom: 12px;">
@@ -322,6 +405,7 @@
 
 <script setup name="ModuleSn">
 import { listModuleSn, getNextSeq, batchGenerateSn, scanModuleSn, delModuleSn } from "@/api/system/moduleSn";
+import { listHwVersionDict, addHwVersionDict, updateHwVersionDict, delHwVersionDict } from "@/api/system/hardwareVersionDict";
 
 const { proxy } = getCurrentInstance();
 
@@ -351,7 +435,7 @@ const { queryParams } = toRefs(data);
 const materialCategoryOptions = [
   { code: 'HIPX', name: '侧摆关节', subs: ['LFRR', 'LRRF'] },
   { code: 'HIPY', name: '髋关节',   subs: ['LFXX', 'RFXX', 'LRXX', 'RRXX'] },
-  { code: 'KNEE', name: '膝关节',   subs: ['6512', '6525'] },
+  { code: 'KNEE', name: '膝关节',   subs: ['0STD', '0PRO'] },
   { code: 'MAIN', name: '主控盒',   subs: ['A733'] },
   { code: 'BATY', name: '动力电池', subs: ['8S2P', '8S5P'] }
 ];
@@ -383,6 +467,8 @@ const generateFormDefault = {
 
 const generateForm = reactive({ ...generateFormDefault });
 
+const hwSelect = reactive({ a: undefined, b: undefined, c: undefined, d: undefined });
+
 const generateRules = {
   projectCode: [
     { required: true, message: '请选择归属项目', trigger: 'change' }
@@ -397,8 +483,17 @@ const generateRules = {
     { required: true, message: '请选择工厂代号', trigger: 'change' }
   ],
   hardwareVersion: [
-    { required: true, message: '请输入硬件版本', trigger: 'blur' },
-    { pattern: /^\d{4}$/, message: '硬件版本为4位数字（ABCD：结构/芯片/电机/其他电子），如 0100', trigger: 'blur' }
+    { required: true, message: '请完整选择A/B/C/D四位硬件版本', trigger: 'change' },
+    {
+      validator: (_rule, _value, callback) => {
+        if (!hwSelect.a || !hwSelect.b || !hwSelect.c || !hwSelect.d) {
+          callback(new Error('请完整选择A/B/C/D四位硬件版本'));
+        } else {
+          callback();
+        }
+      },
+      trigger: 'change'
+    }
   ],
   productionDate: [
     { required: true, message: '请输入生产日期', trigger: 'blur' },
@@ -450,6 +545,152 @@ watch(
 function padSeq(n) {
   if (n == null) return '----';
   return String(n).padStart(4, '0');
+}
+
+// ============ 硬件版本选择 ============
+
+const hwOptionsByPos = reactive({ A: [], B: [], C: [], D: [] });
+
+function loadHwOptions() {
+  listHwVersionDict({ projectCode: 'C2' }).then(res => {
+    const all = res.data || [];
+    ['A','B','C','D'].forEach(pos => {
+      hwOptionsByPos[pos] = all.filter(item => item.position === pos);
+    });
+  }).catch(() => {});
+}
+
+function onHwSelectChange() {
+  const { a, b, c, d } = hwSelect;
+  if (a && b && c && d) {
+    generateForm.hardwareVersion = a + b + c + d;
+  } else {
+    generateForm.hardwareVersion = undefined;
+  }
+  // 触发表单校验
+  proxy.$refs.generateFormRef?.validateField('hardwareVersion');
+}
+
+// ============ 硬件版本枚举维护 ============
+
+const hwDictDialog = reactive({
+  visible: false,
+  loading: false,
+  list: [],
+  filterPosition: undefined
+});
+
+const hwDictForm = reactive({
+  visible: false,
+  submitting: false,
+  id: undefined,
+  projectCode: 'C2',
+  position: undefined,
+  code: '',
+  name: '',
+  sortOrder: 0
+});
+
+const hwDictRules = {
+  position: [{ required: true, message: '请选择位', trigger: 'change' }],
+  code: [{ required: true, message: '请输入枚举值', trigger: 'blur' }],
+  name: [{ required: true, message: '请输入含义说明', trigger: 'blur' }],
+  sortOrder: [{ required: true, message: '请输入排序', trigger: 'blur' }]
+};
+
+function handleHwDict() {
+  hwDictDialog.filterPosition = undefined;
+  hwDictDialog.visible = true;
+  loadHwDictList();
+}
+
+function loadHwDictList() {
+  hwDictDialog.loading = true;
+  const params = { projectCode: 'C2' };
+  if (hwDictDialog.filterPosition) {
+    params.position = hwDictDialog.filterPosition;
+  }
+  listHwVersionDict(params).then(res => {
+    hwDictDialog.list = res.data || [];
+    hwDictDialog.loading = false;
+  }).catch(() => {
+    hwDictDialog.loading = false;
+  });
+}
+
+function resetHwDictDialog() {
+  hwDictDialog.filterPosition = undefined;
+  hwDictDialog.list = [];
+}
+
+function handleHwDictAdd() {
+  resetHwDictForm();
+  hwDictForm.visible = true;
+}
+
+function handleHwDictEdit(row) {
+  resetHwDictForm();
+  Object.assign(hwDictForm, {
+    visible: true,
+    id: row.id,
+    projectCode: row.projectCode,
+    position: row.position,
+    code: row.code,
+    name: row.name,
+    sortOrder: row.sortOrder || 0
+  });
+}
+
+function handleHwDictDelete(row) {
+  proxy.$modal.confirm(`确认删除枚举 "${row.position}位-${row.code} ${row.name}" 吗？`).then(function() {
+    return delHwVersionDict(row.id);
+  }).then(() => {
+    proxy.$modal.msgSuccess('删除成功');
+    loadHwDictList();
+    loadHwOptions(); // 刷新生成弹窗的下拉选项
+  }).catch(() => {});
+}
+
+function resetHwDictForm() {
+  hwDictForm.visible = false;
+  hwDictForm.submitting = false;
+  hwDictForm.id = undefined;
+  hwDictForm.position = undefined;
+  hwDictForm.code = '';
+  hwDictForm.name = '';
+  hwDictForm.sortOrder = 0;
+  proxy.resetForm("hwDictFormRef");
+}
+
+function submitHwDictForm() {
+  proxy.$refs.hwDictFormRef.validate(async (valid) => {
+    if (!valid) return;
+    hwDictForm.submitting = true;
+    try {
+      const data = {
+        projectCode: hwDictForm.projectCode,
+        position: hwDictForm.position,
+        code: hwDictForm.code,
+        name: hwDictForm.name,
+        sortOrder: hwDictForm.sortOrder
+      };
+      if (hwDictForm.id) {
+        data.id = hwDictForm.id;
+        await updateHwVersionDict(data);
+        proxy.$modal.msgSuccess('修改成功');
+      } else {
+        await addHwVersionDict(data);
+        proxy.$modal.msgSuccess('新增成功');
+      }
+      hwDictForm.visible = false;
+      loadHwDictList();
+      loadHwOptions(); // 刷新生成弹窗的下拉选项
+    } catch (e) {
+      // 错误由 request 拦截器统一处理
+    } finally {
+      hwDictForm.submitting = false;
+    }
+  });
 }
 
 // ============ 打印标签 ============
@@ -556,7 +797,7 @@ function focusScanInput() {
 }
 
 // 模组SN格式（V1.1 26位）：项目(2) + 物料分类(4) + 子分类(4) + 工厂(2) + 硬件(4) + 日期(6) + 流水(4)
-const MODULE_SN_RE = /^(C[12]|A2)[A-Z0-9]{4}[A-Z0-9]{4}(GF|ZB|JS)\d{4}\d{6}\d{4}$/;
+const MODULE_SN_RE = /^(C2)[A-Z0-9]{4}[A-Z0-9]{4}(GF|ZB|JS)[A-Z0-9]{4}\d{6}\d{4}$/;
 
 function submitScan() {
   if (scanTimer) clearTimeout(scanTimer);
@@ -623,11 +864,16 @@ function handleSelectionChange(selection) {
 
 function handleGenerate() {
   resetGenerateForm();
+  loadHwOptions();
   generateDialog.visible = true;
 }
 
 function resetGenerateForm() {
   Object.assign(generateForm, generateFormDefault);
+  hwSelect.a = undefined;
+  hwSelect.b = undefined;
+  hwSelect.c = undefined;
+  hwSelect.d = undefined;
   nextSeqInfo.value = {};
   currentSubCategories.value = [];
   if (seqQueryTimer) clearTimeout(seqQueryTimer);

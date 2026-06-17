@@ -17,9 +17,7 @@
                clearable
                style="width: 150px"
             >
-               <el-option label="C1" value="C1" />
                <el-option label="C2" value="C2" />
-               <el-option label="A2" value="A2" />
             </el-select>
          </el-form-item>
          <el-form-item label="状态" prop="status">
