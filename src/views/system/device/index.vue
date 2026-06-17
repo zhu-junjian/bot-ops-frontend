@@ -75,6 +75,88 @@
          <el-table-column label="设备型号" align="center" prop="deviceModel" width="90" />
          <el-table-column label="设备名称" align="center" prop="name" width="140" :show-overflow-tooltip="true" />
          <el-table-column label="IP地址" align="center" prop="deviceIp" width="140" />
+         <el-table-column label="IP属地" align="center" prop="ipLocation" width="140" :show-overflow-tooltip="true">
+            <template #default="scope">
+               <span>{{ scope.row.ipLocation || '-' }}</span>
+            </template>
+         </el-table-column>
+         <el-table-column label="BMS" align="center" width="90">
+            <template #default="scope">
+               <el-tooltip v-if="scope.row.hardwareVersion || scope.row.bmsSoftwareVersion" placement="left" effect="light">
+                  <template #content>
+                     <div style="line-height: 1.8;">
+                        <span style="font-weight: 600;">硬件版本</span>: {{ scope.row.hardwareVersion || '-' }}
+                     </div>
+                     <div style="line-height: 1.8;">
+                        <span style="font-weight: 600;">软件版本</span>: {{ scope.row.bmsSoftwareVersion || '-' }}
+                     </div>
+                  </template>
+                  <el-tag type="success">{{ scope.row.hardwareVersion || '-' }}</el-tag>
+               </el-tooltip>
+               <span v-else>-</span>
+            </template>
+         </el-table-column>
+         <el-table-column label="组件版本" align="center" width="140">
+            <template #default="scope">
+               <el-tooltip v-if="scope.row.softwareVersions" placement="left" effect="light">
+                  <template #content>
+                     <div v-for="(sw, i) in parseSoftwareVersions(scope.row.softwareVersions)" :key="i"
+                          style="line-height: 1.8;">
+                        <span style="font-weight: 600;">{{ sw.name }}</span>: {{ sw.version || '-' }}
+                     </div>
+                  </template>
+                  <el-tag type="primary">{{ parseSoftwareVersions(scope.row.softwareVersions).length }} 个组件</el-tag>
+               </el-tooltip>
+               <span v-else>-</span>
+            </template>
+         </el-table-column>
+         <el-table-column label="MCU固件" align="center" width="100">
+            <template #default="scope">
+               <span v-if="scope.row.mcuSoftwareVersion">
+                  {{ scope.row.mcuSoftwareVersionHex || scope.row.mcuSoftwareVersion }}
+               </span>
+               <span v-else>-</span>
+            </template>
+         </el-table-column>
+         <el-table-column label="系统信息" align="center" width="100">
+            <template #default="scope">
+               <el-tooltip v-if="scope.row.systemKernel || scope.row.systemFilesystem || scope.row.systemBuildTime" placement="left" effect="light">
+                  <template #content>
+                     <div style="line-height: 1.8;">
+                        <span style="font-weight: 600;">内核</span>: {{ scope.row.systemKernel || '-' }}
+                     </div>
+                     <div style="line-height: 1.8;">
+                        <span style="font-weight: 600;">文件系统</span>: {{ scope.row.systemFilesystem || '-' }}
+                     </div>
+                     <div style="line-height: 1.8;">
+                        <span style="font-weight: 600;">构建时间</span>: {{ scope.row.systemBuildTime || '-' }}
+                     </div>
+                     <div style="line-height: 1.8;">
+                        <span style="font-weight: 600;">构建主机</span>: {{ scope.row.systemBuildHost || '-' }}
+                     </div>
+                     <div style="line-height: 1.8;">
+                        <span style="font-weight: 600;">构建用户</span>: {{ scope.row.systemBuildUser || '-' }}
+                     </div>
+                  </template>
+                  <el-tag type="info">{{ scope.row.systemKernel || '-' }}</el-tag>
+               </el-tooltip>
+               <span v-else>-</span>
+            </template>
+         </el-table-column>
+         <el-table-column label="关节驱动" align="center" width="100">
+            <template #default="scope">
+               <el-tooltip v-if="scope.row.jointDrivers" placement="left" effect="light">
+                  <template #content>
+                     <div v-for="(jd, i) in parseSoftwareVersions(scope.row.jointDrivers)" :key="i"
+                          style="line-height: 1.8;">
+                        <span style="font-weight: 600;">#{{ jd.index }}</span>: {{ jd.software_version || '-' }}
+                     </div>
+                  </template>
+                  <el-tag type="warning">{{ parseSoftwareVersions(scope.row.jointDrivers).length }} 个关节</el-tag>
+               </el-tooltip>
+               <span v-else>-</span>
+            </template>
+         </el-table-column>
          <el-table-column label="电量" align="center" prop="batteryLevel" width="80">
             <template #default="scope">
                <span v-if="scope.row.batteryLevel != null">{{ scope.row.batteryLevel }}%</span>
@@ -103,9 +185,33 @@
             </template>
          </el-table-column>
          <el-table-column label="位置" align="center" prop="location" min-width="120" :show-overflow-tooltip="true" />
-         <el-table-column label="备注" align="center" prop="notes" min-width="140" :show-overflow-tooltip="true" />
-         <el-table-column label="操作" align="center" width="100" fixed="right">
+         <el-table-column label="时区" align="center" width="130">
             <template #default="scope">
+               <span>{{ scope.row.timezoneId || '-' }}</span>
+            </template>
+         </el-table-column>
+         <el-table-column label="UTC偏移" align="center" width="90">
+            <template #default="scope">
+               <span v-if="scope.row.timezoneOffset != null">
+                  {{ scope.row.timezoneOffset >= 0 ? '+' : '' }}{{ scope.row.timezoneOffset / 3600 }}h
+               </span>
+               <span v-else>-</span>
+            </template>
+         </el-table-column>
+         <el-table-column label="国家" align="center" prop="countryCode" width="70">
+            <template #default="scope">
+               <span>{{ scope.row.countryCode || '-' }}</span>
+            </template>
+         </el-table-column>
+         <el-table-column label="备注" align="center" prop="notes" min-width="140" :show-overflow-tooltip="true" />
+         <el-table-column label="操作" align="center" width="180" fixed="right">
+            <template #default="scope">
+               <el-button
+                  type="primary"
+                  link
+                  size="small"
+                  @click="openIpHistoryDialog(scope.row)"
+               >IP历史</el-button>
                <el-button
                   type="primary"
                   link
@@ -173,11 +279,30 @@
             </el-button>
          </template>
       </el-dialog>
+
+      <!-- IP变更历史对话框 -->
+      <el-dialog title="IP变更历史" v-model="ipHistoryDialog.visible" width="650px" @close="ipHistoryDialog.history = []">
+         <div style="margin-bottom: 10px;">设备SN：<b>{{ ipHistoryDialog.sn }}</b></div>
+         <el-table :data="ipHistoryDialog.history" v-loading="ipHistoryDialog.loading" max-height="400">
+            <el-table-column label="变更时间" align="center" width="160">
+               <template #default="scope">
+                  <span>{{ parseTime(scope.row.createTime) }}</span>
+               </template>
+            </el-table-column>
+            <el-table-column label="IP地址" align="center" prop="deviceIp" width="160" />
+            <el-table-column label="IP属地" align="center" prop="ipLocation" min-width="200" :show-overflow-tooltip="true">
+               <template #default="scope">
+                  <span>{{ scope.row.ipLocation || '-' }}</span>
+               </template>
+            </el-table-column>
+         </el-table>
+      </el-dialog>
    </div>
 </template>
 
 <script setup name="Device">
 import { listDevice, pullDeviceLog, getLogPullStatus } from "@/api/system/device";
+import { listIpHistory } from "@/api/system/deviceIpHistory";
 
 const { proxy } = getCurrentInstance();
 
@@ -209,12 +334,40 @@ const data = reactive({
 
 const { queryParams } = toRefs(data);
 
+// IP变更历史
+const ipHistoryDialog = reactive({
+  visible: false,
+  sn: '',
+  loading: false,
+  history: []
+});
+
+function openIpHistoryDialog(row) {
+  ipHistoryDialog.sn = row.serialNum;
+  ipHistoryDialog.visible = true;
+  ipHistoryDialog.loading = true;
+  listIpHistory(row.serialNum).then(response => {
+    ipHistoryDialog.history = response.rows;
+  }).finally(() => {
+    ipHistoryDialog.loading = false;
+  });
+}
+
 function statusLabel(status) {
   return statusMap[status]?.label || status;
 }
 
 function statusTagType(status) {
   return statusMap[status]?.type || 'info';
+}
+
+function parseSoftwareVersions(val) {
+  if (!val) return [];
+  try {
+    return typeof val === 'string' ? JSON.parse(val) : val;
+  } catch (e) {
+    return [];
+  }
 }
 
 /** 查询设备列表 */
