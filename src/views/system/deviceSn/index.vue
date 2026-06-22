@@ -418,8 +418,8 @@ const printDialog = reactive({
   printerOnline: false,
   printerHost: '',
   printerPort: '',
-  labelWidth: 60,
-  labelHeight: 40,
+  labelWidth: 40,
+  labelHeight: 15,
   copies: 1
 });
 
@@ -435,8 +435,8 @@ function resetPrintDialog() {
   printDialog.printerOnline = false;
   printDialog.printerHost = '';
   printDialog.printerPort = '';
-  printDialog.labelWidth = 60;
-  printDialog.labelHeight = 40;
+  printDialog.labelWidth = 40;
+  printDialog.labelHeight = 15;
   printDialog.copies = 1;
 }
 
@@ -453,8 +453,8 @@ function checkPrinterStatus() {
       const d = res.data || {};
       printDialog.printerOnline = d.online || d.found || false;
       printDialog.printerHost = d.printerName || '';
-      printDialog.labelWidth = 60;
-      printDialog.labelHeight = 40;
+      printDialog.labelWidth = d.labelWidth || 40;
+      printDialog.labelHeight = d.labelHeight || 15;
       printDialog.checking = false;
     }).catch(() => {
       clearTimeout(timer);
