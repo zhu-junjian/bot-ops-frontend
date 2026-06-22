@@ -50,7 +50,7 @@
                range-separator="-"
                start-placeholder="开始日期"
                end-placeholder="结束日期"
-               value-format="yyyy-MM-dd"
+               value-format="YYYY-MM-DD"
                style="width: 240px"
             />
          </el-form-item>
@@ -211,22 +211,7 @@ function resetScrapDialog() {
 
 function getList() {
   loading.value = true;
-  const params = { ...queryParams.value };
-  if (dateRange.value && dateRange.value.length === 2) {
-    const fmt = (d) => {
-      if (!d) return '';
-      if (typeof d === 'string') return d;
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${y}-${m}-${day}`;
-    };
-    params.params = {
-      beginTime: fmt(dateRange.value[0]),
-      endTime: fmt(dateRange.value[1])
-    };
-  }
-  listModuleInventory(params).then(response => {
+  listModuleInventory(proxy.addDateRange(queryParams.value, dateRange.value)).then(response => {
     inventoryList.value = response.rows;
     total.value = response.total;
     loading.value = false;
