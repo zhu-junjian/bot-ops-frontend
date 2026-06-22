@@ -213,9 +213,17 @@ function getList() {
   loading.value = true;
   const params = { ...queryParams.value };
   if (dateRange.value && dateRange.value.length === 2) {
+    const fmt = (d) => {
+      if (!d) return '';
+      if (typeof d === 'string') return d;
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    };
     params.params = {
-      beginTime: dateRange.value[0],
-      endTime: dateRange.value[1]
+      beginTime: fmt(dateRange.value[0]),
+      endTime: fmt(dateRange.value[1])
     };
   }
   listModuleInventory(params).then(response => {
