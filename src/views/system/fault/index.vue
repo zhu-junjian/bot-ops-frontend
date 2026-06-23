@@ -59,7 +59,23 @@
          <el-table-column label="设备SN" align="center" prop="serialNum" width="180" :show-overflow-tooltip="true" />
          <el-table-column label="故障描述" align="center" prop="faultDesc" min-width="120" :show-overflow-tooltip="true" />
          <el-table-column label="额外描述" align="center" prop="extraDesc" min-width="120" :show-overflow-tooltip="true" />
-         <el-table-column label="补充说明" align="center" prop="customFields" min-width="140" :show-overflow-tooltip="true" />
+         <el-table-column label="补充说明" align="center" min-width="160">
+            <template #default="scope">
+               <template v-if="scope.row.customFields">
+                  <el-popover placement="left" :width="320" trigger="hover">
+                     <template #reference>
+                        <el-tag size="small" type="info">{{ parseCustomFields(scope.row.customFields).length }} 项</el-tag>
+                     </template>
+                     <div style="font-size:12px; line-height:1.8; max-height:300px; overflow-y:auto;">
+                        <div v-for="(item, idx) in parseCustomFields(scope.row.customFields)" :key="idx">
+                           <strong>{{ item.key }}</strong>: {{ item.stringValue }}
+                        </div>
+                     </div>
+                  </el-popover>
+               </template>
+               <span v-else>-</span>
+            </template>
+         </el-table-column>
          <el-table-column label="严重等级" align="center" prop="severity" width="80" />
          <el-table-column label="故障码" align="center" prop="faultCode" width="180">
             <template #default="scope">
@@ -122,6 +138,15 @@ const data = reactive({
 });
 
 const { queryParams } = toRefs(data);
+
+/** 解析 custom_fields JSON 字符串为数组 */
+function parseCustomFields(json) {
+  try {
+    return JSON.parse(json) || [];
+  } catch {
+    return [];
+  }
+}
 
 /** 查询故障列表 */
 function getList() {
