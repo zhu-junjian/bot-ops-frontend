@@ -59,6 +59,7 @@
          <el-table-column label="设备SN" align="center" prop="serialNum" width="180" :show-overflow-tooltip="true" />
          <el-table-column label="故障描述" align="center" prop="faultDesc" min-width="120" :show-overflow-tooltip="true" />
          <el-table-column label="额外描述" align="center" prop="extraDesc" min-width="120" :show-overflow-tooltip="true" />
+         <el-table-column label="补充说明" align="center" prop="customFields" min-width="140" :show-overflow-tooltip="true" />
          <el-table-column label="严重等级" align="center" prop="severity" width="80" />
          <el-table-column label="故障码" align="center" prop="faultCode" width="180">
             <template #default="scope">
