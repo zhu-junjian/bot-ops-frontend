@@ -68,7 +68,7 @@
                      </template>
                      <div style="font-size:12px; line-height:1.8; max-height:300px; overflow-y:auto;">
                         <div v-for="(item, idx) in parseCustomFields(scope.row.customFields)" :key="idx">
-                           <strong>{{ item.key }}</strong>: {{ item.stringValue }}
+                           <strong>{{ item.key }}</strong>: {{ item.string_value }}
                         </div>
                      </div>
                   </el-popover>
