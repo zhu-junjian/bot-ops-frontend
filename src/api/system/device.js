@@ -18,6 +18,15 @@ export function pullDeviceLog(data) {
   })
 }
 
+// 修改设备时区/国家编码
+export function updateDeviceConfig(data) {
+  return request({
+    url: '/device/config',
+    method: 'put',
+    data
+  })
+}
+
 // 查询日志拉取状态
 export function getLogPullStatus(serialNum) {
   return request({

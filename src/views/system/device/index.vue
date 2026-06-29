@@ -190,14 +190,6 @@
                <span>{{ scope.row.timezoneId || '-' }}</span>
             </template>
          </el-table-column>
-         <el-table-column label="UTC偏移" align="center" width="90">
-            <template #default="scope">
-               <span v-if="scope.row.timezoneOffset != null">
-                  {{ scope.row.timezoneOffset >= 0 ? '+' : '' }}{{ scope.row.timezoneOffset / 3600 }}h
-               </span>
-               <span v-else>-</span>
-            </template>
-         </el-table-column>
          <el-table-column label="国家" align="center" prop="countryCode" width="70">
             <template #default="scope">
                <span>{{ scope.row.countryCode || '-' }}</span>
@@ -212,6 +204,12 @@
                   size="small"
                   @click="openIpHistoryDialog(scope.row)"
                >IP历史</el-button>
+               <el-button
+                  type="primary"
+                  link
+                  size="small"
+                  @click="openTzDialog(scope.row)"
+               >时区</el-button>
                <el-button
                   type="primary"
                   link
@@ -280,6 +278,31 @@
          </template>
       </el-dialog>
 
+      <!-- 时区/国家编码编辑对话框 -->
+      <el-dialog title="修改时区/国家编码" v-model="tzDialog.visible" width="480px" @close="closeTzDialog">
+         <el-form label-width="90px">
+            <el-form-item label="设备SN">
+               <span>{{ tzDialog.sn }}</span>
+            </el-form-item>
+            <el-form-item label="时区">
+               <el-select v-model="tzDialog.timezoneId" placeholder="请选择时区" clearable style="width: 100%">
+                  <el-option v-for="tz in TIMEZONE_OPTIONS" :key="tz.value"
+                     :label="tz.label" :value="tz.value" />
+               </el-select>
+            </el-form-item>
+            <el-form-item label="国家编码">
+               <el-select v-model="tzDialog.countryCode" placeholder="请选择国家" clearable style="width: 100%">
+                  <el-option v-for="c in COUNTRY_OPTIONS" :key="c.value"
+                     :label="c.label" :value="c.value" />
+               </el-select>
+            </el-form-item>
+         </el-form>
+         <template #footer>
+            <el-button @click="closeTzDialog">取消</el-button>
+            <el-button type="primary" @click="submitTz" :loading="tzDialog.submitting">确定</el-button>
+         </template>
+      </el-dialog>
+
       <!-- IP变更历史对话框 -->
       <el-dialog title="IP变更历史" v-model="ipHistoryDialog.visible" width="650px" @close="ipHistoryDialog.history = []">
          <div style="margin-bottom: 10px;">设备SN：<b>{{ ipHistoryDialog.sn }}</b></div>
@@ -308,7 +331,7 @@
 </template>
 
 <script setup name="Device">
-import { listDevice, pullDeviceLog, getLogPullStatus } from "@/api/system/device";
+import { listDevice, pullDeviceLog, getLogPullStatus, updateDeviceConfig } from "@/api/system/device";
 import { listIpHistory } from "@/api/system/deviceIpHistory";
 
 const { proxy } = getCurrentInstance();
@@ -369,6 +392,80 @@ function getIpHistory() {
     ipHistoryDialog.total = response.total;
   }).finally(() => {
     ipHistoryDialog.loading = false;
+  });
+}
+
+// ============ 时区编辑 ============
+
+const TIMEZONE_OPTIONS = [
+  { label: 'UTC+8    上海 Asia/Shanghai',       value: 'Asia/Shanghai' },
+  { label: 'UTC+8    新加坡 Asia/Singapore',     value: 'Asia/Singapore' },
+  { label: 'UTC+9    东京 Asia/Tokyo',           value: 'Asia/Tokyo' },
+  { label: 'UTC+9    首尔 Asia/Seoul',           value: 'Asia/Seoul' },
+  { label: 'UTC+5:30 印度 Asia/Kolkata',         value: 'Asia/Kolkata' },
+  { label: 'UTC+4    迪拜 Asia/Dubai',           value: 'Asia/Dubai' },
+  { label: 'UTC+3    莫斯科 Europe/Moscow',      value: 'Europe/Moscow' },
+  { label: 'UTC+1    柏林 Europe/Berlin',        value: 'Europe/Berlin' },
+  { label: 'UTC+0    伦敦 Europe/London',        value: 'Europe/London' },
+  { label: 'UTC-5    纽约 America/New_York',     value: 'America/New_York' },
+  { label: 'UTC-8    洛杉矶 America/Los_Angeles', value: 'America/Los_Angeles' },
+  { label: 'UTC+10   悉尼 Australia/Sydney',     value: 'Australia/Sydney' },
+];
+
+const COUNTRY_OPTIONS = [
+  { label: 'CN 中国',     value: 'CN' },
+  { label: 'US 美国',     value: 'US' },
+  { label: 'JP 日本',     value: 'JP' },
+  { label: 'KR 韩国',     value: 'KR' },
+  { label: 'SG 新加坡',   value: 'SG' },
+  { label: 'IN 印度',     value: 'IN' },
+  { label: 'AE 阿联酋',   value: 'AE' },
+  { label: 'RU 俄罗斯',   value: 'RU' },
+  { label: 'DE 德国',     value: 'DE' },
+  { label: 'GB 英国',     value: 'GB' },
+  { label: 'AU 澳大利亚', value: 'AU' },
+  { label: 'NZ 新西兰',   value: 'NZ' },
+];
+
+const tzDialog = reactive({
+  visible: false,
+  sn: '',
+  timezoneId: undefined,
+  countryCode: undefined,
+  submitting: false
+});
+
+function openTzDialog(row) {
+  tzDialog.sn = row.serialNum;
+  tzDialog.timezoneId = row.timezoneId || undefined;
+  tzDialog.countryCode = row.countryCode || undefined;
+  tzDialog.submitting = false;
+  tzDialog.visible = true;
+}
+
+function closeTzDialog() {
+  tzDialog.visible = false;
+}
+
+function submitTz() {
+  if (!tzDialog.timezoneId && !tzDialog.countryCode) {
+    proxy.$modal.msgWarning('时区和国家编码至少填写一项');
+    return;
+  }
+  tzDialog.submitting = true;
+  const data = {
+    serialNum: tzDialog.sn,
+    timezoneId: tzDialog.timezoneId || undefined,
+    countryCode: tzDialog.countryCode || undefined
+  };
+  updateDeviceConfig(data).then(() => {
+    proxy.$modal.msgSuccess('修改成功');
+    tzDialog.visible = false;
+    getList();
+  }).catch(() => {
+    // 错误由拦截器统一处理
+  }).finally(() => {
+    tzDialog.submitting = false;
   });
 }
 
