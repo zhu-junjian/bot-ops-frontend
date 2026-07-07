@@ -27,6 +27,24 @@ export function updateDeviceConfig(data) {
   })
 }
 
+// 查询设备OTA全量配置
+export function getDeviceOtaConfig(sn) {
+  return request({
+    url: '/device/ota-config',
+    method: 'get',
+    params: { sn }
+  })
+}
+
+// 修改设备OTA属性
+export function updateDeviceOtaConfig(data) {
+  return request({
+    url: '/device/ota-config',
+    method: 'put',
+    data
+  })
+}
+
 // 查询日志拉取状态
 export function getLogPullStatus(serialNum) {
   return request({

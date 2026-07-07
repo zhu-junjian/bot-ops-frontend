@@ -196,7 +196,7 @@
             </template>
          </el-table-column>
          <el-table-column label="备注" align="center" prop="notes" min-width="140" :show-overflow-tooltip="true" />
-         <el-table-column label="操作" align="center" width="180" fixed="right">
+         <el-table-column label="操作" align="center" width="300" fixed="right">
             <template #default="scope">
                <el-button
                   type="primary"
@@ -208,8 +208,20 @@
                   type="primary"
                   link
                   size="small"
+                  @click="openJointSnHistoryDialog(scope.row)"
+               >关节SN</el-button>
+               <el-button
+                  type="primary"
+                  link
+                  size="small"
                   @click="openTzDialog(scope.row)"
                >时区</el-button>
+               <el-button
+                  type="primary"
+                  link
+                  size="small"
+                  @click="openOtaDialog(scope.row)"
+               >OTA</el-button>
                <el-button
                   type="primary"
                   link
@@ -327,12 +339,78 @@
             @pagination="getIpHistory"
          />
       </el-dialog>
+
+      <!-- 关节SN变更历史对话框 -->
+      <el-dialog title="关节SN变更历史" v-model="jointSnHistoryDialog.visible" width="700px" @close="jointSnHistoryDialog.history = []">
+         <div style="margin-bottom: 10px;">设备SN：<b>{{ jointSnHistoryDialog.sn }}</b></div>
+         <el-table :data="jointSnHistoryDialog.history" v-loading="jointSnHistoryDialog.loading" max-height="400">
+            <el-table-column label="变更时间" align="center" width="160">
+               <template #default="scope">
+                  <span>{{ parseTime(scope.row.createTime) }}</span>
+               </template>
+            </el-table-column>
+            <el-table-column label="关节数" align="center" width="80">
+               <template #default="scope">
+                  <el-tag type="warning">{{ parseJointSnapshot(scope.row.jointSnapshot).length }}</el-tag>
+               </template>
+            </el-table-column>
+            <el-table-column label="关节SN明细" align="center" min-width="300">
+               <template #default="scope">
+                  <div v-for="(item, i) in parseJointSnapshot(scope.row.jointSnapshot)" :key="i"
+                       style="line-height: 1.8;">
+                     <span style="font-weight: 600;">#{{ item.index }}</span>: {{ item.sn || '-' }}
+                  </div>
+                  <span v-if="parseJointSnapshot(scope.row.jointSnapshot).length === 0">-</span>
+               </template>
+            </el-table-column>
+         </el-table>
+         <pagination
+            v-show="jointSnHistoryDialog.total > 0"
+            :total="jointSnHistoryDialog.total"
+            v-model:page="jointSnHistoryDialog.pageNum"
+            v-model:limit="jointSnHistoryDialog.pageSize"
+            @pagination="getJointSnHistory"
+         />
+      </el-dialog>
+
+      <!-- OTA属性编辑对话框 -->
+      <el-dialog title="修改设备OTA属性" v-model="otaDialog.visible" width="500px" @close="closeOtaDialog">
+         <div v-if="otaDialog.loading" style="text-align: center; padding: 20px;">
+            <el-icon class="is-loading"><Loading /></el-icon>
+            <span style="margin-left: 8px;">加载中...</span>
+         </div>
+         <el-form v-else label-width="90px">
+            <el-form-item label="设备SN">
+               <span>{{ otaDialog.sn }}</span>
+            </el-form-item>
+            <el-form-item label="OTA型号">
+               <el-input v-model="otaDialog.otaModel" placeholder="请输入OTA型号" />
+            </el-form-item>
+            <el-form-item label="OTA区域">
+               <el-input v-model="otaDialog.otaRegion" placeholder="请输入OTA区域，如 CN" />
+            </el-form-item>
+            <el-divider />
+            <el-form-item label="当前环境">
+               <el-tag :type="otaDialog.envType === 'prod' ? 'danger' : 'info'">
+                  {{ otaDialog.envType === 'prod' ? '正式环境' : '测试环境' }}
+               </el-tag>
+            </el-form-item>
+            <el-form-item label="服务URL">
+               <span style="font-size: 12px; color: #999;">{{ otaDialog.serviceUrl || '-' }}</span>
+            </el-form-item>
+         </el-form>
+         <template #footer>
+            <el-button @click="closeOtaDialog">取消</el-button>
+            <el-button type="primary" @click="submitOta" :loading="otaDialog.submitting">确定</el-button>
+         </template>
+      </el-dialog>
    </div>
 </template>
 
 <script setup name="Device">
-import { listDevice, pullDeviceLog, getLogPullStatus, updateDeviceConfig } from "@/api/system/device";
+import { listDevice, pullDeviceLog, getLogPullStatus, updateDeviceConfig, getDeviceOtaConfig, updateDeviceOtaConfig } from "@/api/system/device";
 import { listIpHistory } from "@/api/system/deviceIpHistory";
+import { listJointSnHistory } from "@/api/system/deviceJointSnHistory";
 
 const { proxy } = getCurrentInstance();
 
@@ -395,6 +473,46 @@ function getIpHistory() {
   });
 }
 
+// 关节SN变更历史
+const jointSnHistoryDialog = reactive({
+  visible: false,
+  sn: '',
+  loading: false,
+  history: [],
+  total: 0,
+  pageNum: 1,
+  pageSize: 10
+});
+
+function openJointSnHistoryDialog(row) {
+  jointSnHistoryDialog.sn = row.serialNum;
+  jointSnHistoryDialog.visible = true;
+  jointSnHistoryDialog.pageNum = 1;
+  getJointSnHistory();
+}
+
+function getJointSnHistory() {
+  jointSnHistoryDialog.loading = true;
+  listJointSnHistory(jointSnHistoryDialog.sn, {
+    pageNum: jointSnHistoryDialog.pageNum,
+    pageSize: jointSnHistoryDialog.pageSize
+  }).then(response => {
+    jointSnHistoryDialog.history = response.rows;
+    jointSnHistoryDialog.total = response.total;
+  }).finally(() => {
+    jointSnHistoryDialog.loading = false;
+  });
+}
+
+function parseJointSnapshot(val) {
+  if (!val) return [];
+  try {
+    return typeof val === 'string' ? JSON.parse(val) : val;
+  } catch (e) {
+    return [];
+  }
+}
+
 // ============ 时区编辑 ============
 
 const TIMEZONE_OPTIONS = [
@@ -445,6 +563,68 @@ function openTzDialog(row) {
 
 function closeTzDialog() {
   tzDialog.visible = false;
+}
+
+// ============ OTA属性编辑 ============
+
+const otaDialog = reactive({
+  visible: false,
+  sn: '',
+  otaModel: '',
+  otaRegion: '',
+  envType: '',
+  serviceUrl: '',
+  loading: false,
+  submitting: false
+});
+
+function openOtaDialog(row) {
+  otaDialog.sn = row.serialNum;
+  otaDialog.loading = true;
+  otaDialog.visible = true;
+  getDeviceOtaConfig(row.serialNum).then(response => {
+    const d = response.data;
+    otaDialog.otaModel = d.otaModel || '';
+    otaDialog.otaRegion = d.otaRegion || '';
+    otaDialog.envType = d.envType || '';
+    otaDialog.serviceUrl = d.serviceUrl || '';
+  }).catch(() => {
+    proxy.$modal.msgWarning('获取OTA配置失败');
+    otaDialog.visible = false;
+  }).finally(() => {
+    otaDialog.loading = false;
+  });
+}
+
+function closeOtaDialog() {
+  otaDialog.visible = false;
+  otaDialog.sn = '';
+  otaDialog.otaModel = '';
+  otaDialog.otaRegion = '';
+  otaDialog.envType = '';
+  otaDialog.serviceUrl = '';
+  otaDialog.submitting = false;
+}
+
+function submitOta() {
+  if (!otaDialog.otaModel && !otaDialog.otaRegion) {
+    proxy.$modal.msgWarning('OTA型号和OTA区域至少填写一项');
+    return;
+  }
+  otaDialog.submitting = true;
+  updateDeviceOtaConfig({
+    sn: otaDialog.sn,
+    otaModel: otaDialog.otaModel || undefined,
+    otaRegion: otaDialog.otaRegion || undefined
+  }).then(() => {
+    proxy.$modal.msgSuccess('OTA属性修改成功，已通过MQTT推送至设备');
+    otaDialog.visible = false;
+    getList();
+  }).catch(() => {
+    // 错误由拦截器统一处理
+  }).finally(() => {
+    otaDialog.submitting = false;
+  });
 }
 
 function submitTz() {
