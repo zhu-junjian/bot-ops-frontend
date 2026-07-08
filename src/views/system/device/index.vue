@@ -390,10 +390,11 @@
                <el-input v-model="otaDialog.otaRegion" placeholder="请输入OTA区域，如 CN" />
             </el-form-item>
             <el-divider />
-            <el-form-item label="当前环境">
-               <el-tag :type="otaDialog.envType === 'prod' ? 'danger' : 'info'">
-                  {{ otaDialog.envType === 'prod' ? '正式环境' : '测试环境' }}
-               </el-tag>
+            <el-form-item label="目标环境">
+               <el-select v-model="otaDialog.envType" placeholder="不切换则留空" clearable style="width: 100%;">
+                  <el-option label="正式环境 (prod)" value="prod" />
+                  <el-option label="测试环境 (test)" value="test" />
+               </el-select>
             </el-form-item>
             <el-form-item label="服务URL">
                <span style="font-size: 12px; color: #999;">{{ otaDialog.serviceUrl || '-' }}</span>
@@ -615,7 +616,8 @@ function submitOta() {
   updateDeviceOtaConfig({
     sn: otaDialog.sn,
     otaModel: otaDialog.otaModel || undefined,
-    otaRegion: otaDialog.otaRegion || undefined
+    otaRegion: otaDialog.otaRegion || undefined,
+    envType: otaDialog.envType || undefined
   }).then(() => {
     proxy.$modal.msgSuccess('OTA属性修改成功，已通过MQTT推送至设备');
     otaDialog.visible = false;
