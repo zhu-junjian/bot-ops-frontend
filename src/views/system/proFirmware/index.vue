@@ -125,7 +125,7 @@
                   :limit="1"
                >
                   <el-button type="primary">点击上传</el-button>
-                  <div class="el-upload__tip">上传固件文件，支持任意格式</div>
+                  <div class="el-upload__tip">上传固件文件，支持任意格式，单个文件最大 10GB</div>
                </el-upload>
             </el-form-item>
             <el-form-item label="OSS地址">
@@ -338,6 +338,12 @@ function handleUploadSuccess(res, file) {
 
 /** 上传前校验 */
 function beforeUpload(file) {
+  const maxSizeMB = 10240;
+  const isLt = file.size / 1024 / 1024 < maxSizeMB;
+  if (!isLt) {
+    proxy.$modal.msgError(`上传固件文件大小不能超过 ${maxSizeMB} MB!`);
+    return false;
+  }
   return true;
 }
 

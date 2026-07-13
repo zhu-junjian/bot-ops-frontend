@@ -74,6 +74,18 @@
          <el-table-column label="设备SN" align="center" prop="serialNum" width="180" :show-overflow-tooltip="true" />
          <el-table-column label="设备型号" align="center" prop="deviceModel" width="90" />
          <el-table-column label="设备名称" align="center" prop="name" width="140" :show-overflow-tooltip="true" />
+         <el-table-column label="在线状态" align="center" prop="currentStatus" width="100">
+            <template #default="scope">
+               <el-tag :type="statusTagType(scope.row.currentStatus)">
+                  {{ statusLabel(scope.row.currentStatus) }}
+               </el-tag>
+            </template>
+         </el-table-column>
+         <el-table-column label="最后心跳" align="center" prop="lastHeartbeat" width="170">
+            <template #default="scope">
+               <span>{{ scope.row.lastHeartbeat ? parseTime(scope.row.lastHeartbeat) : '-' }}</span>
+            </template>
+         </el-table-column>
          <el-table-column label="IP地址" align="center" prop="deviceIp" width="140" />
          <el-table-column label="IP属地" align="center" prop="ipLocation" width="140" :show-overflow-tooltip="true">
             <template #default="scope">
@@ -161,18 +173,6 @@
             <template #default="scope">
                <span v-if="scope.row.batteryLevel != null">{{ scope.row.batteryLevel }}%</span>
                <span v-else>-</span>
-            </template>
-         </el-table-column>
-         <el-table-column label="在线状态" align="center" prop="currentStatus" width="100">
-            <template #default="scope">
-               <el-tag :type="statusTagType(scope.row.currentStatus)">
-                  {{ statusLabel(scope.row.currentStatus) }}
-               </el-tag>
-            </template>
-         </el-table-column>
-         <el-table-column label="最后心跳" align="center" prop="lastHeartbeat" width="170">
-            <template #default="scope">
-               <span>{{ scope.row.lastHeartbeat ? parseTime(scope.row.lastHeartbeat) : '-' }}</span>
             </template>
          </el-table-column>
          <el-table-column label="日志拉取" align="center" width="220">
