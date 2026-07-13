@@ -2,7 +2,7 @@
    <div class="app-container">
       <el-form :model="queryParams" ref="queryRef" v-show="showSearch" :inline="true" label-width="100px">
          <el-form-item label="平台类型" prop="platformType">
-            <el-select v-model="queryParams.platformType" placeholder="请选择平台" clearable @change="handleQuery">
+            <el-select v-model="queryParams.platformType" placeholder="请选择平台" clearable @change="handleQuery" style="width: 140px">
                <el-option label="全部" :value="undefined" />
                <el-option label="Android" :value="0" />
                <el-option label="iOS" :value="1" />
