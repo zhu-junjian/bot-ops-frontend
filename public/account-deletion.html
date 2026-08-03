@@ -251,7 +251,7 @@
             img.src = '';
             img.style.display = 'none';
 
-            fetch('/captchaImage')
+            fetch(getApiBase() + '/captchaImage')
                 .then(function(res) { return res.json(); })
                 .then(function(data) {
                     if (data.captchaEnabled === false) {
@@ -296,7 +296,7 @@
             submitBtn.innerHTML = '正在处理... <span class="en">Processing...</span>';
 
             try {
-                var response = await fetch('/api/v1/account/delete', {
+                var response = await fetch(getApiBase() + '/api/v1/account/delete', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
