@@ -236,10 +236,9 @@
     </footer>
 
     <script>
-        // 自动适配 API 路径：本地直连空，dev 环境 /dev-api，生产 /prod-api
+        // 自动适配 API 路径：本地直连空，其他环境 /prod-api
         function getApiBase() {
             if (location.port === '8090') return '';
-            if (location.hostname.indexOf('dev') === 0) return '/dev-api';
             return '/prod-api';
         }
 
