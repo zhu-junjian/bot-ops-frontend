@@ -236,10 +236,10 @@
     </footer>
 
     <script>
-        // 自动适配 API 路径：优先不带前缀，若部署在需要代理前缀的环境（如 /prod-api），
-        // 可在此处按域名判断：if (location.hostname === 'www.mirrormetech.com') return '/prod-api';
+        // 自动适配 API 路径：生产环境用 /prod-api，本地直连空
         function getApiBase() {
-            return '';
+            if (location.port === '8090') return '';
+            return '/prod-api';
         }
 
         var captchaUuid = '';
