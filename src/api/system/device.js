@@ -52,3 +52,21 @@ export function getLogPullStatus(serialNum) {
     method: 'get'
   })
 }
+
+// 修改设备备注
+export function updateDeviceNotes(data) {
+  return request({
+    url: '/device/notes',
+    method: 'put',
+    data
+  })
+}
+
+// 查询设备在线周期记录
+export function listOnlineSessions(serialNum, pageParams) {
+  return request({
+    url: '/device/online-sessions/' + serialNum,
+    method: 'get',
+    params: pageParams
+  })
+}

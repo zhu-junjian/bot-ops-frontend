@@ -195,7 +195,12 @@
                <span>{{ scope.row.countryCode || '-' }}</span>
             </template>
          </el-table-column>
-         <el-table-column label="备注" align="center" prop="notes" min-width="140" :show-overflow-tooltip="true" />
+         <el-table-column label="备注" align="center" min-width="140">
+            <template #default="scope">
+               <span v-if="scope.row.notes" class="notes-cell" @click="editNotes(scope.row)" style="cursor: pointer; color: #409eff;">{{ scope.row.notes }}</span>
+               <el-button v-else link type="primary" size="small" @click="editNotes(scope.row)">添加备注</el-button>
+            </template>
+         </el-table-column>
          <el-table-column label="操作" align="center" width="300" fixed="right">
             <template #default="scope">
                <el-button
@@ -229,6 +234,12 @@
                   :disabled="scope.row.currentStatus !== 'online'"
                   @click="openPullDialog(scope.row)"
                >日志拉取</el-button>
+               <el-button
+                  type="primary"
+                  link
+                  size="small"
+                  @click="openOnlineSessionDialog(scope.row)"
+               >在线记录</el-button>
             </template>
          </el-table-column>
       </el-table>
@@ -373,6 +384,42 @@
          />
       </el-dialog>
 
+      <!-- 在线周期记录对话框 -->
+      <el-dialog title="在线周期记录" v-model="onlineSessionDialog.visible" width="700px" @close="onlineSessionDialog.sessions = []">
+         <div style="margin-bottom: 10px;">设备SN：<b>{{ onlineSessionDialog.sn }}</b></div>
+         <el-table :data="onlineSessionDialog.sessions" v-loading="onlineSessionDialog.loading" max-height="400">
+            <el-table-column label="上线时间" align="center" width="160">
+               <template #default="scope">
+                  <span>{{ parseTime(scope.row.onlineTime) }}</span>
+               </template>
+            </el-table-column>
+            <el-table-column label="离线时间" align="center" width="160">
+               <template #default="scope">
+                  <span v-if="scope.row.offlineTime">{{ parseTime(scope.row.offlineTime) }}</span>
+                  <el-tag v-else type="success" size="small">在线中</el-tag>
+               </template>
+            </el-table-column>
+            <el-table-column label="在线时长" align="center" width="120">
+               <template #default="scope">
+                  <span v-if="scope.row.durationSec != null">{{ formatDuration(scope.row.durationSec) }}</span>
+                  <span v-else>-</span>
+               </template>
+            </el-table-column>
+            <el-table-column label="记录时间" align="center" width="160">
+               <template #default="scope">
+                  <span>{{ parseTime(scope.row.createTime) }}</span>
+               </template>
+            </el-table-column>
+         </el-table>
+         <pagination
+            v-show="onlineSessionDialog.total > 0"
+            :total="onlineSessionDialog.total"
+            v-model:page="onlineSessionDialog.pageNum"
+            v-model:limit="onlineSessionDialog.pageSize"
+            @pagination="getOnlineSessions"
+         />
+      </el-dialog>
+
       <!-- OTA属性编辑对话框 -->
       <el-dialog title="修改设备OTA属性" v-model="otaDialog.visible" width="500px" @close="closeOtaDialog">
          <div v-if="otaDialog.loading" style="text-align: center; padding: 20px;">
@@ -405,11 +452,27 @@
             <el-button type="primary" @click="submitOta" :loading="otaDialog.submitting">确定</el-button>
          </template>
       </el-dialog>
+
+      <!-- 备注编辑对话框 -->
+      <el-dialog title="修改备注" v-model="notesDialog.visible" width="450px">
+         <el-form label-width="80px">
+            <el-form-item label="设备SN">
+               <span>{{ notesDialog.sn }}</span>
+            </el-form-item>
+            <el-form-item label="备注">
+               <el-input v-model="notesDialog.notes" type="textarea" :rows="3" placeholder="请输入备注" />
+            </el-form-item>
+         </el-form>
+         <template #footer>
+            <el-button @click="notesDialog.visible = false">取消</el-button>
+            <el-button type="primary" @click="submitNotes" :loading="notesDialog.submitting">确定</el-button>
+         </template>
+      </el-dialog>
    </div>
 </template>
 
 <script setup name="Device">
-import { listDevice, pullDeviceLog, getLogPullStatus, updateDeviceConfig, getDeviceOtaConfig, updateDeviceOtaConfig } from "@/api/system/device";
+import { listDevice, pullDeviceLog, getLogPullStatus, updateDeviceConfig, getDeviceOtaConfig, updateDeviceOtaConfig, listOnlineSessions, updateDeviceNotes } from "@/api/system/device";
 import { listIpHistory } from "@/api/system/deviceIpHistory";
 import { listJointSnHistory } from "@/api/system/deviceJointSnHistory";
 
@@ -605,6 +668,78 @@ function closeOtaDialog() {
   otaDialog.envType = '';
   otaDialog.serviceUrl = '';
   otaDialog.submitting = false;
+}
+
+// ============ 在线周期记录 ============
+
+const onlineSessionDialog = reactive({
+  visible: false,
+  sn: '',
+  loading: false,
+  sessions: [],
+  total: 0,
+  pageNum: 1,
+  pageSize: 10
+});
+
+function openOnlineSessionDialog(row) {
+  onlineSessionDialog.sn = row.serialNum;
+  onlineSessionDialog.visible = true;
+  onlineSessionDialog.pageNum = 1;
+  getOnlineSessions();
+}
+
+function getOnlineSessions() {
+  onlineSessionDialog.loading = true;
+  listOnlineSessions(onlineSessionDialog.sn, {
+    pageNum: onlineSessionDialog.pageNum,
+    pageSize: onlineSessionDialog.pageSize
+  }).then(response => {
+    onlineSessionDialog.sessions = response.data.rows;
+    onlineSessionDialog.total = response.data.total;
+  }).finally(() => {
+    onlineSessionDialog.loading = false;
+  });
+}
+
+function formatDuration(seconds) {
+  if (seconds == null) return '-';
+  if (seconds < 60) return seconds + '秒';
+  if (seconds < 3600) return Math.floor(seconds / 60) + '分' + (seconds % 60) + '秒';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return h + '时' + m + '分';
+}
+
+// ============ 备注编辑 ============
+
+const notesDialog = reactive({
+  visible: false,
+  sn: '',
+  notes: '',
+  submitting: false
+});
+
+function editNotes(row) {
+  notesDialog.sn = row.serialNum;
+  notesDialog.notes = row.notes || '';
+  notesDialog.visible = true;
+}
+
+function submitNotes() {
+  notesDialog.submitting = true;
+  updateDeviceNotes({
+    serialNum: notesDialog.sn,
+    notes: notesDialog.notes
+  }).then(() => {
+    proxy.$modal.msgSuccess('备注修改成功');
+    notesDialog.visible = false;
+    getList();
+  }).catch(() => {
+    // 错误由拦截器统一处理
+  }).finally(() => {
+    notesDialog.submitting = false;
+  });
 }
 
 function submitOta() {
