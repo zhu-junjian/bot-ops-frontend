@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账号删除请求 / Account Deletion Request - BAOBOT</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+            background: #f5f7fa;
+            color: #303133;
+            line-height: 1.8;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .container { max-width: 760px; margin: 0 auto; padding: 40px 20px; flex: 1; }
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 40px;
+            margin-bottom: 24px;
+        }
+        h1 { font-size: 28px; font-weight: 700; color: #1d1d1f; margin-bottom: 8px; }
+        .app-name { font-size: 16px; font-weight: 600; color: #303133; margin-bottom: 32px; letter-spacing: 1px; }
+        h2 { font-size: 18px; font-weight: 600; color: #1d1d1f; margin: 28px 0 12px; padding-bottom: 8px; border-bottom: 2px solid #f0f0f0; }
+        h2:first-of-type { margin-top: 0; }
+
+        /* 双语行 */
+        .bilingual { display: flex; gap: 16px; margin-bottom: 8px; }
+        .bilingual .zh { flex: 1; color: #303133; }
+        .bilingual .en { flex: 1; color: #86868b; font-size: 14px; }
+        .bilingual.wrap { flex-wrap: wrap; gap: 4px 16px; }
+        .bilingual.wrap .zh,
+        .bilingual.wrap .en { flex: none; }
+
+        p { margin-bottom: 4px; }
+        ol { padding-left: 20px; margin-bottom: 8px; }
+        ol li { margin-bottom: 4px; }
+        ol li .bilingual { margin-bottom: 0; }
+
+        .form-group { margin: 20px 0; }
+        label { display: block; font-weight: 600; margin-bottom: 6px; }
+        label .en { font-weight: 400; color: #86868b; font-size: 13px; }
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 16px;
+            border: 1.5px solid #dcdfe6;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus { border-color: #409eff; }
+        input:disabled { background: #f5f7fa; cursor: not-allowed; }
+        .error-msg { color: #f56c6c; font-size: 13px; margin-top: 4px; display: none; }
+
+        .captcha-row { display: flex; gap: 12px; align-items: center; }
+        .captcha-row input { flex: 1; }
+        .captcha-img { height: 42px; border: 1px solid #dcdfe6; border-radius: 6px; cursor: pointer; }
+        .captcha-refresh { font-size: 13px; color: #409eff; cursor: pointer; white-space: nowrap; user-select: none; }
+        .captcha-refresh:hover { text-decoration: underline; }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            background: #e74c3c;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #c0392b; }
+        .btn:disabled { background: #a0a0a0; cursor: not-allowed; }
+        .btn .en { font-weight: 400; font-size: 13px; }
+
+        .result { margin-top: 20px; padding: 16px 20px; border-radius: 8px; display: none; }
+        .result.success { display: block; background: #f0f9eb; border: 1px solid #c2e7b0; color: #67c23a; }
+        .result.error { display: block; background: #fef0f0; border: 1px solid #fbc4c4; color: #f56c6c; }
+
+        table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #ebeef5; }
+        th { background: #f5f7fa; font-weight: 600; color: #303133; }
+        td { color: #515154; }
+        tr:last-child td { border-bottom: none; }
+
+        .warning-box {
+            background: #fdf6ec;
+            border: 1px solid #faecd8;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-top: 24px;
+            font-size: 14px;
+        }
+        .warning-box .zh { color: #e6a23c; }
+        .warning-box .en { color: #c99a2e; font-size: 13px; }
+        .warning-box strong { display: block; margin-bottom: 4px; }
+
+        footer { text-align: center; padding: 24px 20px; color: #86868b; font-size: 13px; }
+        footer a { color: #409eff; text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+
+        @media (max-width: 640px) {
+            .card { padding: 24px 16px; }
+            h1 { font-size: 22px; }
+            th, td { padding: 8px 10px; font-size: 12px; }
+            .bilingual { flex-direction: column; gap: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>请求删除账号数据<br><span style="font-size:16px;font-weight:400;color:#86868b;">Request Account Data Deletion</span></h1>
+            <p class="app-name">BAOBOT APP</p>
+
+            <!-- 操作步骤 / Steps -->
+            <h2>操作步骤 <span style="font-weight:400;font-size:13px;color:#86868b;">/ Steps</span></h2>
+            <ol>
+                <li>
+                    <div class="bilingual">
+                        <span class="zh">输入您的<strong>账号</strong>和<strong>密码</strong>以验证身份。</span>
+                        <span class="en">Enter your <strong>account</strong> and <strong>password</strong> to verify your identity.</span>
+                    </div>
+                </li>
+                <li>
+                    <div class="bilingual">
+                        <span class="zh">输入<strong>验证码</strong>后点击<strong>"删除我的账号"</strong>。</span>
+                        <span class="en">Enter the <strong>captcha</strong> and click <strong>"Delete My Account"</strong>.</span>
+                    </div>
+                </li>
+                <li>
+                    <div class="bilingual">
+                        <span class="zh">验证通过后账号将立即停用，无法再登录。</span>
+                        <span class="en">Once verified, your account will be disabled immediately and you will no longer be able to log in.</span>
+                    </div>
+                </li>
+                <li>
+                    <div class="bilingual">
+                        <span class="zh">如需恢复账号，请在 30 天内联系客服。</span>
+                        <span class="en">To restore your account, please contact support within 30 days.</span>
+                    </div>
+                </li>
+            </ol>
+
+            <!-- 数据删除与保留说明 / Data Deletion & Retention -->
+            <h2>数据删除与保留说明 <span style="font-weight:400;font-size:13px;color:#86868b;">/ Data Deletion &amp; Retention Policy</span></h2>
+            <p>
+                <span class="zh">根据您的删除请求，我们将按以下政策处理您的数据：</span>
+                <span class="en" style="color:#86868b;font-size:14px;">Upon your deletion request, your data will be handled according to the following policy:</span>
+            </p>
+            <table>
+                <thead>
+                    <tr>
+                        <th>数据类型<br><span style="font-weight:400;font-size:12px;color:#86868b;">Data Type</span></th>
+                        <th>处理方式<br><span style="font-weight:400;font-size:12px;color:#86868b;">Action</span></th>
+                        <th>保留期限<br><span style="font-weight:400;font-size:12px;color:#86868b;">Retention</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>账号登录权限 <br><span style="color:#86868b;font-size:12px;">Account access</span></td>
+                        <td>立即停用 <br><span style="color:#86868b;font-size:12px;">Disabled immediately</span></td>
+                        <td>—</td>
+                    </tr>
+                    <tr>
+                        <td>昵称、头像、个人简介、性别、生日等 <br><span style="color:#86868b;font-size:12px;">Nickname, avatar, bio, gender, birthday, etc.</span></td>
+                        <td>隐藏（标记为已删除） <br><span style="color:#86868b;font-size:12px;">Hidden (marked as deleted)</span></td>
+                        <td>30 天后永久清除 <br><span style="color:#86868b;font-size:12px;">Permanently purged after 30 days</span></td>
+                    </tr>
+                    <tr>
+                        <td>邮箱、手机号码 <br><span style="color:#86868b;font-size:12px;">Email, phone number</span></td>
+                        <td>保留（防滥用/欺诈） <br><span style="color:#86868b;font-size:12px;">Retained (abuse/fraud prevention)</span></td>
+                        <td>90 天后永久清除 <br><span style="color:#86868b;font-size:12px;">Permanently purged after 90 days</span></td>
+                    </tr>
+                    <tr>
+                        <td>密码哈希、加密盐值 <br><span style="color:#86868b;font-size:12px;">Password hash, salt</span></td>
+                        <td>保留 <br><span style="color:#86868b;font-size:12px;">Retained</span></td>
+                        <td>30 天后永久清除 <br><span style="color:#86868b;font-size:12px;">Permanently purged after 30 days</span></td>
+                    </tr>
+                    <tr>
+                        <td>帖子、评论、内容 <br><span style="color:#86868b;font-size:12px;">Posts, comments, content</span></td>
+                        <td>保留但去关联化 <br><span style="color:#86868b;font-size:12px;">Preserved but disassociated</span></td>
+                        <td>显示为"已删除用户" <br><span style="color:#86868b;font-size:12px;">Shown as "Deleted User"</span></td>
+                    </tr>
+                    <tr>
+                        <td>系统日志、IP 地址 <br><span style="color:#86868b;font-size:12px;">System logs, IP addresses</span></td>
+                        <td>保留 <br><span style="color:#86868b;font-size:12px;">Retained</span></td>
+                        <td>按标准日志轮转（30-90 天） <br><span style="color:#86868b;font-size:12px;">Per standard log rotation (30-90 days)</span></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="warning-box">
+                <div class="bilingual">
+                    <strong class="zh">⚠ 重要提示：此操作不可撤销。提交后账号将立即停用，请确认已备份所有需要的数据。</strong>
+                    <strong class="en">⚠ Important: This action is irreversible. Your account will be disabled immediately. Please ensure you have backed up all necessary data.</strong>
+                </div>
+            </div>
+
+            <!-- 表单 / Form -->
+            <h2>提交删除请求 <span style="font-weight:400;font-size:13px;color:#86868b;">/ Submit Deletion Request</span></h2>
+            <div class="form-group">
+                <label>账号 <span class="en">/ Account</span></label>
+                <input type="text" id="username" placeholder="请输入您的账号 / Enter your account" autocomplete="username" />
+                <p class="error-msg" id="usernameError">请输入账号 / Please enter your account</p>
+            </div>
+            <div class="form-group">
+                <label>密码 <span class="en">/ Password</span></label>
+                <input type="password" id="password" placeholder="请输入您的密码 / Enter your password" autocomplete="current-password" />
+                <p class="error-msg" id="passwordError">请输入密码 / Please enter your password</p>
+            </div>
+            <div class="form-group">
+                <label>验证码 <span class="en">/ Captcha</span></label>
+                <div class="captcha-row">
+                    <input type="text" id="captchaCode" placeholder="请输入验证码 / Enter captcha" maxlength="6" autocomplete="off" />
+                    <img class="captcha-img" id="captchaImg" src="" alt="验证码 / Captcha" title="点击刷新 / Click to refresh" onclick="refreshCaptcha()" />
+                    <span class="captcha-refresh" onclick="refreshCaptcha()">换一张<br><span style="font-size:11px;">Refresh</span></span>
+                </div>
+                <p class="error-msg" id="captchaError">请输入验证码 / Please enter captcha</p>
+            </div>
+            <button class="btn" id="submitBtn" onclick="submitDeletion()">删除我的账号 <span class="en">/ Delete My Account</span></button>
+            <div class="result" id="result"></div>
+        </div>
+    </div>
+
+    <footer>
+        如有疑问，请联系客服：<a href="mailto:support@mirrormetech.com">support@mirrormetech.com</a>
+        <br><span style="font-size:12px;">For questions, contact support: <a href="mailto:support@mirrormetech.com">support@mirrormetech.com</a></span>
+    </footer>
+
+    <script>
+        // 自动适配 API 路径：直连 Spring Boot 空，dev 环境 /dev-api，生产 /prod-api
+        function getApiBase() {
+            if (location.port === '8090') return '';
+            if (location.hostname.indexOf('dev') === 0) return '/dev-api';
+            return '/prod-api';
+        }
+
+        var captchaUuid = '';
+
+        refreshCaptcha();
+
+        function refreshCaptcha() {
+            var img = document.getElementById('captchaImg');
+            img.src = '';
+            img.style.display = 'none';
+
+            fetch(getApiBase() + '/captchaImage')
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    if (data.captchaEnabled === false) {
+                        document.querySelector('.form-group:has(#captchaCode)').style.display = 'none';
+                        return;
+                    }
+                    captchaUuid = data.uuid;
+                    img.src = 'data:image/jpg;base64,' + data.img;
+                    img.style.display = 'inline-block';
+                })
+                .catch(function() {});
+        }
+
+        async function submitDeletion() {
+            var usernameInput = document.getElementById('username');
+            var passwordInput = document.getElementById('password');
+            var captchaInput = document.getElementById('captchaCode');
+            var usernameErrorEl = document.getElementById('usernameError');
+            var passwordErrorEl = document.getElementById('passwordError');
+            var captchaErrorEl = document.getElementById('captchaError');
+            var resultEl = document.getElementById('result');
+            var submitBtn = document.getElementById('submitBtn');
+
+            var username = usernameInput.value.trim();
+            var password = passwordInput.value;
+            var code = captchaInput.value.trim();
+
+            usernameErrorEl.style.display = 'none';
+            passwordErrorEl.style.display = 'none';
+            captchaErrorEl.style.display = 'none';
+            resultEl.className = 'result';
+            resultEl.style.display = 'none';
+
+            if (!username) { usernameErrorEl.style.display = 'block'; return; }
+            if (!password) { passwordErrorEl.style.display = 'block'; return; }
+            if (!code) { captchaErrorEl.style.display = 'block'; return; }
+
+            submitBtn.disabled = true;
+            usernameInput.disabled = true;
+            passwordInput.disabled = true;
+            captchaInput.disabled = true;
+            submitBtn.innerHTML = '正在处理... <span class="en">Processing...</span>';
+
+            try {
+                var response = await fetch(getApiBase() + '/api/v1/account/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password,
+                        code: code,
+                        uuid: captchaUuid
+                    })
+                });
+                var data = await response.json();
+
+                if (response.ok && (data.code === 200 || data.code === 0)) {
+                    resultEl.className = 'result success';
+                    resultEl.textContent = (data.msg || '您的账号已成功删除。') + ' / Your account has been successfully deleted.';
+                } else {
+                    resultEl.className = 'result error';
+                    resultEl.textContent = (data.msg || '处理请求时出错，请稍后再试。') + ' / An error occurred, please try again later.';
+                    refreshCaptcha();
+                    captchaInput.value = '';
+                }
+                resultEl.style.display = 'block';
+            } catch (err) {
+                resultEl.className = 'result error';
+                resultEl.textContent = '网络请求失败，请检查网络后重试。 / Network error, please check your connection and try again.';
+                resultEl.style.display = 'block';
+                refreshCaptcha();
+            } finally {
+                submitBtn.disabled = false;
+                usernameInput.disabled = false;
+                passwordInput.disabled = false;
+                captchaInput.disabled = false;
+                submitBtn.innerHTML = '删除我的账号 <span class="en">/ Delete My Account</span>';
+            }
+        }
+
+        document.getElementById('captchaCode').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') submitDeletion();
+        });
+    </script>
+</body>
+</html>
