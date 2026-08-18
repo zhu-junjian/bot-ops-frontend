@@ -201,7 +201,7 @@
                <el-button v-else link type="primary" size="small" @click="editNotes(scope.row)">添加备注</el-button>
             </template>
          </el-table-column>
-         <el-table-column label="操作" align="center" width="300" fixed="right">
+         <el-table-column label="操作" align="center" width="370" fixed="right">
             <template #default="scope">
                <el-button
                   type="primary"
@@ -228,18 +228,24 @@
                   @click="openOtaDialog(scope.row)"
                >OTA</el-button>
                <el-button
-                  type="primary"
-                  link
-                  size="small"
-                  :disabled="scope.row.currentStatus !== 'online'"
-                  @click="openPullDialog(scope.row)"
-               >日志拉取</el-button>
+                 type="primary"
+                 link
+                 size="small"
+                 :disabled="scope.row.currentStatus !== 'online'"
+                 @click="openPullDialog(scope.row)"
+              >日志拉取</el-button>
                <el-button
                   type="primary"
                   link
                   size="small"
                   @click="openOnlineSessionDialog(scope.row)"
                >在线记录</el-button>
+               <el-button
+                  type="primary"
+                  link
+                  size="small"
+                  @click="openOpenclawDialog(scope.row)"
+               >OpenClaw令牌</el-button>
             </template>
          </el-table-column>
       </el-table>
@@ -431,10 +437,14 @@
                <span>{{ otaDialog.sn }}</span>
             </el-form-item>
             <el-form-item label="OTA型号">
-               <el-input v-model="otaDialog.otaModel" placeholder="请输入OTA型号" />
+               <el-select v-model="otaDialog.otaModel" placeholder="请选择OTA型号" clearable filterable style="width: 100%;" @change="onOtaModelChange">
+                  <el-option v-for="m in otaDialog.modelOptions" :key="m" :label="m" :value="m" />
+               </el-select>
             </el-form-item>
             <el-form-item label="OTA区域">
-               <el-input v-model="otaDialog.otaRegion" placeholder="请输入OTA区域，如 CN" />
+               <el-select v-model="otaDialog.otaRegion" placeholder="请选择OTA区域" clearable filterable style="width: 100%;">
+                  <el-option v-for="r in otaDialog.regionOptions" :key="r" :label="r" :value="r" />
+               </el-select>
             </el-form-item>
             <el-divider />
             <el-form-item label="目标环境">
@@ -468,13 +478,44 @@
             <el-button type="primary" @click="submitNotes" :loading="notesDialog.submitting">确定</el-button>
          </template>
       </el-dialog>
+
+      <!-- OpenClaw令牌对话框 -->
+      <el-dialog title="OpenClaw 令牌" v-model="openclawDialog.visible" width="620px" @close="closeOpenclawDialog">
+         <el-form label-width="90px">
+            <el-form-item label="设备SN">
+               <span>{{ openclawDialog.sn }}</span>
+            </el-form-item>
+            <el-form-item v-if="openclawDialog.loginUrl" label="登录URL">
+               <el-input :model-value="openclawDialog.loginUrl" readonly>
+                  <template #append>
+                     <el-button v-if="openclawDialog.loginUrl" v-copyText="openclawDialog.loginUrl" v-copyText:callback="copyOpenclawSuccess">复制</el-button>
+                  </template>
+               </el-input>
+            </el-form-item>
+            <el-form-item label="令牌">
+               <el-input :model-value="openclawDialog.token" readonly>
+                  <template #append>
+                     <el-button v-if="openclawDialog.token" v-copyText="openclawDialog.token" v-copyText:callback="copyOpenclawSuccess">复制</el-button>
+                  </template>
+               </el-input>
+            </el-form-item>
+         </el-form>
+         <template #footer>
+            <el-button type="primary" @click="openclawDialog.visible = false">关闭</el-button>
+         </template>
+      </el-dialog>
    </div>
 </template>
 
 <script setup name="Device">
-import { listDevice, pullDeviceLog, getLogPullStatus, updateDeviceConfig, getDeviceOtaConfig, updateDeviceOtaConfig, listOnlineSessions, updateDeviceNotes } from "@/api/system/device";
+import { listDevice, pullDeviceLog, getLogPullStatus, updateDeviceConfig, getDeviceOtaConfig, updateDeviceOtaConfig, listOnlineSessions, updateDeviceNotes, getOpenclawToken } from "@/api/system/device";
+import { getOtaServiceConfigOptions } from "@/api/system/otaServiceConfig";
 import { listIpHistory } from "@/api/system/deviceIpHistory";
 import { listJointSnHistory } from "@/api/system/deviceJointSnHistory";
+
+// 设备自建 AP 的局域网 IP（固定）：设备 OpenClaw Web UI 通过该地址访问，
+// 不要用设备列表里的 deviceIp（那是设备所在网络路由器的对外 IP）。
+const OPENCLAW_AP_LAN_IP = '10.21.40.1';
 
 const { proxy } = getCurrentInstance();
 
@@ -638,6 +679,8 @@ const otaDialog = reactive({
   otaRegion: '',
   envType: '',
   serviceUrl: '',
+  modelOptions: [],
+  regionOptions: [],
   loading: false,
   submitting: false
 });
@@ -646,18 +689,47 @@ function openOtaDialog(row) {
   otaDialog.sn = row.serialNum;
   otaDialog.loading = true;
   otaDialog.visible = true;
-  getDeviceOtaConfig(row.serialNum).then(response => {
-    const d = response.data;
+  // 并行加载设备当前 OTA 配置 + 全量型号选项
+  Promise.all([
+    getDeviceOtaConfig(row.serialNum),
+    getOtaServiceConfigOptions()
+  ]).then(([configRes, optionsRes]) => {
+    const d = configRes.data;
     otaDialog.otaModel = d.otaModel || '';
-    otaDialog.otaRegion = d.otaRegion || '';
     otaDialog.envType = d.envType || '';
     otaDialog.serviceUrl = d.serviceUrl || '';
+    otaDialog.modelOptions = optionsRes.data.models || [];
+
+    // 如果设备已有 otaModel，按该型号加载区域；否则用全量区域
+    if (d.otaModel) {
+      return getOtaServiceConfigOptions(d.otaModel).then(r => {
+        otaDialog.regionOptions = r.data.regions || [];
+        otaDialog.otaRegion = d.otaRegion || '';
+      });
+    } else {
+      otaDialog.regionOptions = optionsRes.data.regions || [];
+      otaDialog.otaRegion = d.otaRegion || '';
+    }
   }).catch(() => {
     proxy.$modal.msgWarning('获取OTA配置失败');
     otaDialog.visible = false;
   }).finally(() => {
     otaDialog.loading = false;
   });
+}
+
+function onOtaModelChange(val) {
+  otaDialog.otaRegion = '';
+  otaDialog.serviceUrl = '';
+  if (val) {
+    getOtaServiceConfigOptions(val).then(res => {
+      otaDialog.regionOptions = res.data.regions || [];
+    });
+  } else {
+    getOtaServiceConfigOptions().then(res => {
+      otaDialog.regionOptions = res.data.regions || [];
+    });
+  }
 }
 
 function closeOtaDialog() {
@@ -667,6 +739,8 @@ function closeOtaDialog() {
   otaDialog.otaRegion = '';
   otaDialog.envType = '';
   otaDialog.serviceUrl = '';
+  otaDialog.modelOptions = [];
+  otaDialog.regionOptions = [];
   otaDialog.submitting = false;
 }
 
@@ -709,6 +783,40 @@ function formatDuration(seconds) {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   return h + '时' + m + '分';
+}
+
+// ============ OpenClaw 令牌查询 ============
+
+const openclawDialog = reactive({
+  visible: false,
+  sn: '',
+  token: '',
+  loginUrl: ''
+});
+
+function openOpenclawDialog(row) {
+  openclawDialog.sn = row.serialNum;
+  openclawDialog.token = '';
+  openclawDialog.loginUrl = '';
+  openclawDialog.visible = true;
+  getOpenclawToken(row.serialNum).then(res => {
+    openclawDialog.token = res.data || '';
+    openclawDialog.loginUrl = `http://${OPENCLAW_AP_LAN_IP}:18789/chat?session=agent%3Amain%3Amain#token=${openclawDialog.token}`;
+  }).catch(() => {
+    proxy.$modal.msgError('获取 OpenClaw 令牌失败');
+    openclawDialog.visible = false;
+  });
+}
+
+function closeOpenclawDialog() {
+  openclawDialog.visible = false;
+  openclawDialog.sn = '';
+  openclawDialog.token = '';
+  openclawDialog.loginUrl = '';
+}
+
+function copyOpenclawSuccess() {
+  proxy.$modal.msgSuccess('复制成功');
 }
 
 // ============ 备注编辑 ============

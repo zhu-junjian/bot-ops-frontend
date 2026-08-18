@@ -9,6 +9,15 @@ export function listDevice(query) {
   })
 }
 
+// 查询设备 OpenClaw Web UI 登录令牌（HMAC-SHA256(secret, SN) 派生）
+export function getOpenclawToken(sn) {
+  return request({
+    url: '/device/openclaw-token',
+    method: 'get',
+    params: { sn }
+  })
+}
+
 // 下发日志拉取命令
 export function pullDeviceLog(data) {
   return request({
