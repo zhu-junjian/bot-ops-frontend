@@ -1,5 +1,14 @@
 import request from '@/utils/request'
 
+// 获取OTA型号/区域下拉选项，otaModel可选，指定后只返回该型号下的区域
+export function getOtaServiceConfigOptions(otaModel) {
+  return request({
+    url: '/ota-service-config/options',
+    method: 'get',
+    params: otaModel ? { otaModel } : {}
+  })
+}
+
 // 查询OTA服务配置列表
 export function listOtaServiceConfig(query) {
   return request({
