@@ -236,7 +236,7 @@
                <el-button v-else link type="primary" size="small" @click="editNotes(scope.row)">添加备注</el-button>
             </template>
          </el-table-column>
-         <el-table-column label="操作" align="center" width="370" fixed="right">
+         <el-table-column label="操作" align="center" width="410" fixed="right">
             <template #default="scope">
                <el-button
                   type="primary"
@@ -269,6 +269,13 @@
                  :disabled="scope.row.currentStatus !== 'online'"
                  @click="openPullDialog(scope.row)"
               >日志拉取</el-button>
+               <el-button
+                  type="primary"
+                  link
+                  size="small"
+                  :disabled="scope.row.currentStatus !== 'online'"
+                  @click="openSshDialog(scope.row)"
+               >SSH</el-button>
                <el-button
                   type="primary"
                   link
@@ -363,6 +370,28 @@
          <template #footer>
             <el-button @click="closeTzDialog">取消</el-button>
             <el-button type="primary" @click="submitTz" :loading="tzDialog.submitting">确定</el-button>
+         </template>
+      </el-dialog>
+
+      <!-- SSH 开关下发对话框 -->
+      <el-dialog title="SSH 开关下发" v-model="sshDialog.visible" width="480px" @close="closeSshDialog">
+         <el-form label-width="90px">
+            <el-form-item label="设备SN">
+               <span>{{ sshDialog.sn }}</span>
+            </el-form-item>
+            <el-form-item label="动作">
+               <el-radio-group v-model="sshDialog.action">
+                  <el-radio value="start">开启 SSH（start）</el-radio>
+                  <el-radio value="stop">关闭 SSH（stop）</el-radio>
+               </el-radio-group>
+            </el-form-item>
+            <el-form-item>
+               <div style="color: #999; font-size: 12px;">一次性命令，仅在线设备可下发；设备重启后 SSH 默认关闭。</div>
+            </el-form-item>
+         </el-form>
+         <template #footer>
+            <el-button @click="closeSshDialog">取消</el-button>
+            <el-button type="primary" @click="submitSsh" :loading="sshDialog.submitting">确定下发</el-button>
          </template>
       </el-dialog>
 
@@ -550,7 +579,7 @@
 </template>
 
 <script setup name="Device">
-import { listDevice, pullDeviceLog, getLogPullStatus, updateDeviceConfig, getDeviceOtaConfig, updateDeviceOtaConfig, listOnlineSessions, updateDeviceNotes, getOpenclawToken } from "@/api/system/device";
+import { listDevice, pullDeviceLog, getLogPullStatus, updateDeviceConfig, getDeviceOtaConfig, updateDeviceOtaConfig, updateDeviceSsh, listOnlineSessions, updateDeviceNotes, getOpenclawToken } from "@/api/system/device";
 import { getOtaServiceConfigOptions } from "@/api/system/otaServiceConfig";
 import { listIpHistory } from "@/api/system/deviceIpHistory";
 import { listJointSnHistory } from "@/api/system/deviceJointSnHistory";
@@ -941,6 +970,41 @@ function submitTz() {
     // 错误由拦截器统一处理
   }).finally(() => {
     tzDialog.submitting = false;
+  });
+}
+
+// ============ SSH 开关下发 ============
+
+const sshDialog = reactive({
+  visible: false,
+  sn: '',
+  action: 'start',
+  submitting: false
+});
+
+function openSshDialog(row) {
+  sshDialog.sn = row.serialNum;
+  sshDialog.action = 'start';
+  sshDialog.visible = true;
+}
+
+function closeSshDialog() {
+  sshDialog.visible = false;
+  sshDialog.sn = '';
+}
+
+function submitSsh() {
+  sshDialog.submitting = true;
+  updateDeviceSsh({
+    sn: sshDialog.sn,
+    action: sshDialog.action
+  }).then(() => {
+    proxy.$modal.msgSuccess('SSH指令已通过MQTT下发至设备');
+    sshDialog.visible = false;
+  }).catch(() => {
+    // 错误由拦截器统一处理
+  }).finally(() => {
+    sshDialog.submitting = false;
   });
 }
 

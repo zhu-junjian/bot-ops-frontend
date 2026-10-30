@@ -54,6 +54,15 @@ export function updateDeviceOtaConfig(data) {
   })
 }
 
+// SSH 开关下发（一次性命令，仅在线设备可下发）
+export function updateDeviceSsh(data) {
+  return request({
+    url: '/device/ssh-config',
+    method: 'put',
+    data
+  })
+}
+
 // 查询日志拉取状态
 export function getLogPullStatus(serialNum) {
   return request({
