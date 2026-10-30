@@ -172,6 +172,12 @@
         </template>
       </el-table-column>
 
+      <el-table-column prop="lang" label="语言" align="center" width="100">
+        <template #default="scope">
+          <el-tag size="small" :type="scope.row.lang === 'en' ? 'success' : 'info'">{{ scope.row.lang === 'en' ? 'English' : '中文' }}</el-tag>
+        </template>
+      </el-table-column>
+
       <el-table-column prop="level" label="层级" align="center" width="100">
         <template #default="scope">
           <el-tag size="small">{{ scope.row.level }}级</el-tag>
@@ -233,6 +239,12 @@
         </el-form-item>
         <el-form-item label="分类名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入分类名称" />
+        </el-form-item>
+        <el-form-item label="菜单语言" prop="lang">
+          <el-select v-model="form.lang" placeholder="请选择语言" style="width: 100%">
+            <el-option label="中文" value="zh" />
+            <el-option label="English" value="en" />
+          </el-select>
         </el-form-item>
         <el-form-item label="官方排序" prop="sortOrder">
           <el-input-number v-model="form.sortOrder" controls-position="right" :min="0" />
@@ -644,12 +656,13 @@ function reset() {
   form.value = {
     id: undefined,
     name: undefined,
+    lang: 'zh',
     roleKey: undefined,
     officialWeight: 0,
     sortOrder: 999,
     actionUrl:undefined,
     coverUrl:undefined,
-    status: "0",
+    status: 0,
     actionFiles:[],
     videoFiles:[],
     audioFiles:[],
@@ -671,26 +684,17 @@ function reset() {
   title.value = "发布内容";
 }*/
 
-/** 修改模板 */
+/** 修改分类（从后端拉取完整数据回填，含语言/发布状态等字段） */
 function handleUpdate(row) {
   reset();
-  const id = row.id || ids.value;
-  getRole(id).then(response => {
-    form.value = response.data;
-    form.value.parentId = row.parentId;
-    open.value = true;
-    nextTick(() => {
-      roleMenu.then((res) => {
-        let checkedKeys = res.checkedKeys;
-        checkedKeys.forEach((v) => {
-          nextTick(() => {
-            menuRef.value.setChecked(v, true, false);
-          });
-        });
-      });
+  getCategory(row.id).then(response => {
+    form.value = Object.assign({}, response.data, {
+      parentId: row.parentId,
+      coverUrlFiles: [], actionFiles: [], videoFiles: [], audioFiles: [], coverContentFiles: []
     });
+    open.value = true;
+    title.value = "修改分类";
   });
-  title.value = "修改分类";
 }
 
 /** 根据角色ID查询菜单树结构 */
