@@ -21,7 +21,7 @@ export function getCategoryTree() {
 // 查询分类详细
 export function getCategory(id) {
   return request({
-    url: '/categoryTree/category/' + id,
+    url: '/categoryTree/' + id,
     method: 'get'
   })
 }

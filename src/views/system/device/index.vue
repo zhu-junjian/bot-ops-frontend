@@ -73,6 +73,11 @@
          </el-table-column>
          <el-table-column label="设备SN" align="center" prop="serialNum" width="180" :show-overflow-tooltip="true" />
          <el-table-column label="设备型号" align="center" prop="deviceModel" width="90" />
+         <el-table-column label="产品类型" align="center" prop="productType" width="100">
+            <template #default="scope">
+               <span>{{ scope.row.productType || '-' }}</span>
+            </template>
+         </el-table-column>
          <el-table-column label="设备名称" align="center" prop="name" width="140" :show-overflow-tooltip="true" />
          <el-table-column label="在线状态" align="center" prop="currentStatus" width="100">
             <template #default="scope">
@@ -94,8 +99,11 @@
          </el-table-column>
          <el-table-column label="BMS" align="center" width="90">
             <template #default="scope">
-               <el-tooltip v-if="scope.row.hardwareVersion || scope.row.bmsSoftwareVersion" placement="left" effect="light">
+               <el-tooltip v-if="scope.row.bmsSn || scope.row.hardwareVersion || scope.row.bmsSoftwareVersion" placement="left" effect="light">
                   <template #content>
+                     <div style="line-height: 1.8;">
+                        <span style="font-weight: 600;">SN</span>: {{ scope.row.bmsSn || '-' }}
+                     </div>
                      <div style="line-height: 1.8;">
                         <span style="font-weight: 600;">硬件版本</span>: {{ scope.row.hardwareVersion || '-' }}
                      </div>
@@ -104,6 +112,27 @@
                      </div>
                   </template>
                   <el-tag type="success">{{ scope.row.hardwareVersion || '-' }}</el-tag>
+               </el-tooltip>
+               <span v-else>-</span>
+            </template>
+         </el-table-column>
+         <el-table-column label="导航板信息" align="center" width="140">
+            <template #default="scope">
+               <el-tooltip
+                  v-if="scope.row.naviSn || parseNaviVersions(scope.row.naviVersions).length"
+                  placement="left"
+                  effect="light"
+               >
+                  <template #content>
+                     <div style="line-height: 1.8;">
+                        <span style="font-weight: 600;">SN</span>: {{ scope.row.naviSn || '-' }}
+                     </div>
+                     <div v-for="(item, i) in parseNaviVersions(scope.row.naviVersions)" :key="i"
+                          style="line-height: 1.8;">
+                        <span style="font-weight: 600;">{{ item.name || '-' }}</span>: {{ item.version || '-' }}
+                     </div>
+                  </template>
+                  <el-tag type="primary">{{ parseNaviVersions(scope.row.naviVersions).length }} 个版本</el-tag>
                </el-tooltip>
                <span v-else>-</span>
             </template>
@@ -132,7 +161,7 @@
          </el-table-column>
          <el-table-column label="系统信息" align="center" width="100">
             <template #default="scope">
-               <el-tooltip v-if="scope.row.systemKernel || scope.row.systemFilesystem || scope.row.systemBuildTime" placement="left" effect="light">
+               <el-tooltip v-if="scope.row.systemKernel || scope.row.systemFilesystem || scope.row.systemBuildTime || scope.row.trainId || scope.row.releaseId" placement="left" effect="light">
                   <template #content>
                      <div style="line-height: 1.8;">
                         <span style="font-weight: 600;">内核</span>: {{ scope.row.systemKernel || '-' }}
@@ -148,6 +177,12 @@
                      </div>
                      <div style="line-height: 1.8;">
                         <span style="font-weight: 600;">构建用户</span>: {{ scope.row.systemBuildUser || '-' }}
+                     </div>
+                     <div style="line-height: 1.8;">
+                        <span style="font-weight: 600;">Train ID</span>: {{ scope.row.trainId || '-' }}
+                     </div>
+                     <div style="line-height: 1.8;">
+                        <span style="font-weight: 600;">Release ID</span>: {{ scope.row.releaseId || '-' }}
                      </div>
                   </template>
                   <el-tag type="info">{{ scope.row.systemKernel || '-' }}</el-tag>
@@ -201,7 +236,7 @@
                <el-button v-else link type="primary" size="small" @click="editNotes(scope.row)">添加备注</el-button>
             </template>
          </el-table-column>
-         <el-table-column label="操作" align="center" width="370" fixed="right">
+         <el-table-column label="操作" align="center" width="410" fixed="right">
             <template #default="scope">
                <el-button
                   type="primary"
@@ -214,7 +249,7 @@
                   link
                   size="small"
                   @click="openJointSnHistoryDialog(scope.row)"
-               >关节SN</el-button>
+               >模组SN</el-button>
                <el-button
                   type="primary"
                   link
@@ -234,6 +269,13 @@
                  :disabled="scope.row.currentStatus !== 'online'"
                  @click="openPullDialog(scope.row)"
               >日志拉取</el-button>
+               <el-button
+                  type="primary"
+                  link
+                  size="small"
+                  :disabled="scope.row.currentStatus !== 'online'"
+                  @click="openSshDialog(scope.row)"
+               >SSH</el-button>
                <el-button
                   type="primary"
                   link
@@ -308,8 +350,7 @@
       </el-dialog>
 
       <!-- 时区/国家编码编辑对话框 -->
-      <el-dialog title="修改时区/国家编码" v-model="tzDialog.visible" width="480px" @close="closeTzDialog">
-         <el-form label-width="90px">
+      <el-dialog title="修改时区/国家编码" v-model="tzDialog.visible" width="480px" @close="closeTzDialog">         <el-form label-width="90px">
             <el-form-item label="设备SN">
                <span>{{ tzDialog.sn }}</span>
             </el-form-item>
@@ -329,6 +370,28 @@
          <template #footer>
             <el-button @click="closeTzDialog">取消</el-button>
             <el-button type="primary" @click="submitTz" :loading="tzDialog.submitting">确定</el-button>
+         </template>
+      </el-dialog>
+
+      <!-- SSH 开关下发对话框 -->
+      <el-dialog title="SSH 开关下发" v-model="sshDialog.visible" width="480px" @close="closeSshDialog">
+         <el-form label-width="90px">
+            <el-form-item label="设备SN">
+               <span>{{ sshDialog.sn }}</span>
+            </el-form-item>
+            <el-form-item label="动作">
+               <el-radio-group v-model="sshDialog.action">
+                  <el-radio value="start">开启 SSH（start）</el-radio>
+                  <el-radio value="stop">关闭 SSH（stop）</el-radio>
+               </el-radio-group>
+            </el-form-item>
+            <el-form-item>
+               <div style="color: #999; font-size: 12px;">一次性命令，仅在线设备可下发；设备重启后 SSH 默认关闭。</div>
+            </el-form-item>
+         </el-form>
+         <template #footer>
+            <el-button @click="closeSshDialog">取消</el-button>
+            <el-button type="primary" @click="submitSsh" :loading="sshDialog.submitting">确定下发</el-button>
          </template>
       </el-dialog>
 
@@ -357,8 +420,8 @@
          />
       </el-dialog>
 
-      <!-- 关节SN变更历史对话框 -->
-      <el-dialog title="关节SN变更历史" v-model="jointSnHistoryDialog.visible" width="700px" @close="jointSnHistoryDialog.history = []">
+      <!-- 模组SN变更历史对话框（关节 + 电池BMS） -->
+      <el-dialog title="模组SN变更历史" v-model="jointSnHistoryDialog.visible" width="700px" @close="jointSnHistoryDialog.history = []">
          <div style="margin-bottom: 10px;">设备SN：<b>{{ jointSnHistoryDialog.sn }}</b></div>
          <el-table :data="jointSnHistoryDialog.history" v-loading="jointSnHistoryDialog.loading" max-height="400">
             <el-table-column label="变更时间" align="center" width="160">
@@ -366,16 +429,21 @@
                   <span>{{ parseTime(scope.row.createTime) }}</span>
                </template>
             </el-table-column>
-            <el-table-column label="关节数" align="center" width="80">
+            <el-table-column label="模组数" align="center" width="80">
                <template #default="scope">
                   <el-tag type="warning">{{ parseJointSnapshot(scope.row.jointSnapshot).length }}</el-tag>
                </template>
             </el-table-column>
-            <el-table-column label="关节SN明细" align="center" min-width="300">
+            <el-table-column label="模组SN明细" align="center" min-width="300">
                <template #default="scope">
                   <div v-for="(item, i) in parseJointSnapshot(scope.row.jointSnapshot)" :key="i"
                        style="line-height: 1.8;">
-                     <span style="font-weight: 600;">#{{ item.index }}</span>: {{ item.sn || '-' }}
+                     <template v-if="item.type === 'bms'">
+                        <span style="font-weight: 600;">电池</span>: {{ item.sn || '-' }}
+                     </template>
+                     <template v-else>
+                        <span style="font-weight: 600;">#{{ item.index }}</span>: {{ item.sn || '-' }}
+                     </template>
                   </div>
                   <span v-if="parseJointSnapshot(scope.row.jointSnapshot).length === 0">-</span>
                </template>
@@ -499,6 +567,9 @@
                   </template>
                </el-input>
             </el-form-item>
+            <el-form-item v-if="openclawDialog.validFrom" label="有效期">
+               <span>{{ openclawDialog.validFrom }} ~ {{ openclawDialog.validTo }}</span>
+            </el-form-item>
          </el-form>
          <template #footer>
             <el-button type="primary" @click="openclawDialog.visible = false">关闭</el-button>
@@ -508,7 +579,7 @@
 </template>
 
 <script setup name="Device">
-import { listDevice, pullDeviceLog, getLogPullStatus, updateDeviceConfig, getDeviceOtaConfig, updateDeviceOtaConfig, listOnlineSessions, updateDeviceNotes, getOpenclawToken } from "@/api/system/device";
+import { listDevice, pullDeviceLog, getLogPullStatus, updateDeviceConfig, getDeviceOtaConfig, updateDeviceOtaConfig, updateDeviceSsh, listOnlineSessions, updateDeviceNotes, getOpenclawToken } from "@/api/system/device";
 import { getOtaServiceConfigOptions } from "@/api/system/otaServiceConfig";
 import { listIpHistory } from "@/api/system/deviceIpHistory";
 import { listJointSnHistory } from "@/api/system/deviceJointSnHistory";
@@ -578,7 +649,7 @@ function getIpHistory() {
   });
 }
 
-// 关节SN变更历史
+// 模组SN变更历史（关节 + 电池BMS）
 const jointSnHistoryDialog = reactive({
   visible: false,
   sn: '',
@@ -791,16 +862,22 @@ const openclawDialog = reactive({
   visible: false,
   sn: '',
   token: '',
-  loginUrl: ''
+  loginUrl: '',
+  validFrom: '',
+  validTo: ''
 });
 
 function openOpenclawDialog(row) {
   openclawDialog.sn = row.serialNum;
   openclawDialog.token = '';
   openclawDialog.loginUrl = '';
+  openclawDialog.validFrom = '';
+  openclawDialog.validTo = '';
   openclawDialog.visible = true;
   getOpenclawToken(row.serialNum).then(res => {
-    openclawDialog.token = res.data || '';
+    openclawDialog.token = res.data?.token || '';
+    openclawDialog.validFrom = res.data?.validFrom || '';
+    openclawDialog.validTo = res.data?.validTo || '';
     openclawDialog.loginUrl = `http://${OPENCLAW_AP_LAN_IP}:18789/chat?session=agent%3Amain%3Amain#token=${openclawDialog.token}`;
   }).catch(() => {
     proxy.$modal.msgError('获取 OpenClaw 令牌失败');
@@ -813,6 +890,8 @@ function closeOpenclawDialog() {
   openclawDialog.sn = '';
   openclawDialog.token = '';
   openclawDialog.loginUrl = '';
+  openclawDialog.validFrom = '';
+  openclawDialog.validTo = '';
 }
 
 function copyOpenclawSuccess() {
@@ -894,6 +973,41 @@ function submitTz() {
   });
 }
 
+// ============ SSH 开关下发 ============
+
+const sshDialog = reactive({
+  visible: false,
+  sn: '',
+  action: 'start',
+  submitting: false
+});
+
+function openSshDialog(row) {
+  sshDialog.sn = row.serialNum;
+  sshDialog.action = 'start';
+  sshDialog.visible = true;
+}
+
+function closeSshDialog() {
+  sshDialog.visible = false;
+  sshDialog.sn = '';
+}
+
+function submitSsh() {
+  sshDialog.submitting = true;
+  updateDeviceSsh({
+    sn: sshDialog.sn,
+    action: sshDialog.action
+  }).then(() => {
+    proxy.$modal.msgSuccess('SSH指令已通过MQTT下发至设备');
+    sshDialog.visible = false;
+  }).catch(() => {
+    // 错误由拦截器统一处理
+  }).finally(() => {
+    sshDialog.submitting = false;
+  });
+}
+
 function statusLabel(status) {
   return statusMap[status]?.label || status;
 }
@@ -909,6 +1023,11 @@ function parseSoftwareVersions(val) {
   } catch (e) {
     return [];
   }
+}
+
+function parseNaviVersions(val) {
+  const versions = parseSoftwareVersions(val);
+  return Array.isArray(versions) ? versions : [];
 }
 
 /** 查询设备列表 */

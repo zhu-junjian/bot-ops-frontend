@@ -83,6 +83,8 @@
       </el-table-column>
       <el-table-column label="服务URL" prop="serviceUrl" :show-overflow-tooltip="true" min-width="220" />
       <el-table-column label="Token" prop="token" :show-overflow-tooltip="true" min-width="200" />
+      <el-table-column label="设备Token" prop="deviceToken" :show-overflow-tooltip="true" min-width="200" />
+      <el-table-column label="Tailscale AuthKey" prop="tailscaleAuthKey" :show-overflow-tooltip="true" min-width="200" />
       <el-table-column label="创建时间" align="center" prop="createTime" width="160">
         <template #default="scope">
           <span>{{ parseTime(scope.row.createTime) }}</span>
@@ -134,6 +136,15 @@
         <el-form-item label="Token" prop="token">
           <el-input v-model="form.token" placeholder="请输入OTA服务鉴权Token" />
         </el-form-item>
+        <el-form-item label="设备Token" prop="deviceToken">
+          <el-input v-model="form.deviceToken" placeholder="请输入设备端OTA Token" />
+        </el-form-item>
+        <el-form-item label="AuthKey" prop="tailscaleAuthKey">
+          <el-input
+            v-model="form.tailscaleAuthKey"
+            placeholder="Tailscale AuthKey，留空使用系统默认（tskey-auth-k5qz...）"
+          />
+        </el-form-item>
       </el-form>
       <template #footer>
         <div class="dialog-footer">
@@ -175,7 +186,8 @@ const data = reactive({
     otaRegion: [{ required: true, message: "OTA区域不能为空", trigger: "blur" }],
     envType: [{ required: true, message: "环境类型不能为空", trigger: "change" }],
     serviceUrl: [{ required: true, message: "服务URL不能为空", trigger: "blur" }],
-    token: [{ required: true, message: "Token不能为空", trigger: "blur" }]
+    token: [{ required: true, message: "Token不能为空", trigger: "blur" }],
+    deviceToken: [{ required: true, message: "设备Token不能为空", trigger: "blur" }]
   }
 });
 
@@ -223,7 +235,9 @@ function reset() {
     otaRegion: undefined,
     envType: undefined,
     serviceUrl: undefined,
-    token: undefined
+    token: undefined,
+    deviceToken: undefined,
+    tailscaleAuthKey: undefined
   };
   proxy.resetForm("configRef");
 }
